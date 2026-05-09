@@ -59,3 +59,10 @@ target_link_libraries(test_csv PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_csv)
+
+add_executable(test_runner test_runner.cpp)
+target_link_libraries(test_runner PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_runner)
