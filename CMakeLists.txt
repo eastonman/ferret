@@ -81,6 +81,15 @@ add_library(ferret_core STATIC
 target_include_directories(ferret_core PUBLIC include)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
 
+add_executable(ferret
+  src/main.cpp
+)
+target_link_libraries(ferret PRIVATE
+  ferret_core
+  CLI11::CLI11
+  sljit::sljit
+)
+
 enable_testing()
 include(GoogleTest)
 add_subdirectory(tests)
