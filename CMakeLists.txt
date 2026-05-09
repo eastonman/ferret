@@ -65,6 +65,12 @@ else()
   add_library(sljit::sljit ALIAS sljit_static)
 endif()
 
+add_library(ferret_core STATIC
+  src/axis.cpp
+)
+target_include_directories(ferret_core PUBLIC include)
+target_compile_features(ferret_core PUBLIC cxx_std_20)
+
 enable_testing()
 include(GoogleTest)
 add_subdirectory(tests)
