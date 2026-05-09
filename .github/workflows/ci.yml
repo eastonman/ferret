@@ -1,0 +1,50 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install ninja (linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: install ninja (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: configure
+        run: cmake -S . -B build -GNinja
+
+      - name: build
+        run: cmake --build build
+
+      - name: test
+        run: ctest --test-dir build --output-on-failure
+
+  nix:
+    name: nix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - name: flake check
+        run: nix flake check
+      - name: build
+        run: nix build
+      - name: test in devshell
+        run: |
+          nix develop --command bash -c \
+            "cmake -S . -B build -GNinja && cmake --build build && ctest --test-dir build --output-on-failure"
