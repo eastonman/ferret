@@ -77,8 +77,10 @@ add_library(ferret_core STATIC
   src/benchmark_registry.cpp
   src/output/csv.cpp
   src/runner.cpp
+  src/padding.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
+target_link_libraries(ferret_core PUBLIC sljit::sljit)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
 
 add_executable(ferret

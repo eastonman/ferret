@@ -66,3 +66,10 @@ target_link_libraries(test_runner PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_runner)
+
+add_executable(test_padding test_padding.cpp)
+target_link_libraries(test_padding PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_padding)
