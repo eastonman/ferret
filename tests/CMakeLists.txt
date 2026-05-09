@@ -30,3 +30,10 @@ target_link_libraries(test_cli_axis PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_cli_axis)
+
+add_executable(test_timing test_timing.cpp)
+target_link_libraries(test_timing PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_timing)
