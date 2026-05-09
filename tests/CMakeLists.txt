@@ -44,3 +44,11 @@ target_link_libraries(test_pinning PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_pinning)
+
+add_executable(test_benchmark_registry test_benchmark_registry.cpp)
+target_link_libraries(test_benchmark_registry PRIVATE
+  ferret_core
+  sljit::sljit
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_benchmark_registry)
