@@ -69,6 +69,9 @@ add_library(ferret_core STATIC
   src/axis.cpp
   src/sweep.cpp
   src/cli_axis.cpp
+  src/timing/x86_64.cpp
+  src/timing/aarch64.cpp
+  src/timing/calibrate.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
