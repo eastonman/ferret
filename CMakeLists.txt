@@ -72,6 +72,8 @@ add_library(ferret_core STATIC
   src/timing/x86_64.cpp
   src/timing/aarch64.cpp
   src/timing/calibrate.cpp
+  src/pinning/linux.cpp
+  src/pinning/macos.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
 target_compile_features(ferret_core PUBLIC cxx_std_20)

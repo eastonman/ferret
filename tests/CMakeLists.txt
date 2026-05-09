@@ -37,3 +37,10 @@ target_link_libraries(test_timing PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_timing)
+
+add_executable(test_pinning test_pinning.cpp)
+target_link_libraries(test_pinning PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_pinning)
