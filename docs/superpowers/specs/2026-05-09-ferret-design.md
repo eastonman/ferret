@@ -8,7 +8,9 @@ ferret is a JIT-driven cross-platform microbenchmark framework for reverse-engin
 
 It works by emitting parameterized microbenchmarks at runtime, measuring their per-site cost via free-running timing counters, and sweeping a parameter axis so the user can plot the resulting curve and identify capacity/associativity cliffs.
 
-The primary signal is **per-site cycles vs. footprint**: as the workload's working set grows, per-site cost stays flat until it exceeds the structure under test, then steps to a higher plateau. The cliff position reveals the structure's capacity.
+The primary signal is **per-site cost vs. footprint**: as the workload's working set grows, per-site cost stays flat until it exceeds the structure under test, then steps to a higher plateau. The cliff position reveals the structure's capacity.
+
+Per-site cost is reported in **CPU cycles** when the user supplies the running core frequency (via `--freq` plus a one-time probe), and in **nanoseconds** otherwise. Cycles are the preferred unit — the absolute number is meaningful information about the structure under test.
 
 ## 2. Scope
 
@@ -18,7 +20,7 @@ The primary signal is **per-site cycles vs. footprint**: as the workload's worki
 - Cross-OS execution: **Linux**, **macOS** (Apple Silicon), and **Android** (userspace via Termux/NDK).
 - Microbenchmark framework: static-registered C++ benchmarks, sweep-axis driver, CSV output.
 - Measurement: timing-only, using free-running counters (`rdtsc`/`rdtscp` on x86, `CNTVCT_EL0` on ARM64).
-- One v1 microbenchmark: **`direct_branch_footprint`**.
+- Two v1 microbenchmarks: **`direct_branch_footprint`** (primary) and **`dependent_chain_throughput`** (frequency probe).
 - Python plot script (`scripts/plot.py`) consuming ferret's CSV.
 - Unit and integration tests via **GoogleTest** + CTest.
 - Build via CMake. **Nix flake is the primary dependency-management path**; FetchContent is the fallback when Nix isn't available.
@@ -63,11 +65,13 @@ ferret/
 │   │   ├── macos.cpp          # thread_policy_set + setpriority
 │   │   └── android.cpp        # thin shim over linux.cpp
 │   └── output/
-│       └── csv.cpp            # writes ticks_per_site rows
+│       └── csv.cpp            # writes per-site measurement rows
 ├── benchmarks/
-│   └── direct_branch_footprint.cpp
+│   ├── direct_branch_footprint.cpp
+│   └── dependent_chain_throughput.cpp
 ├── scripts/
-│   └── plot.py                # matplotlib cliff plotter
+│   ├── plot.py                # matplotlib cliff plotter
+│   └── freq.py                # extract frequency from probe CSV
 ├── tests/
 │   ├── CMakeLists.txt         # gtest_discover_tests, registers with CTest
 │   ├── test_sweep.cpp
@@ -153,9 +157,11 @@ API style: pre-built IR (`sljit_emit_op2(c, SLJIT_ADD, dst, src1, src2)` etc.). 
 
 **Rejected:** AsmJit (maintainer announced "DEVELOPMENT SUSPENDED" in January 2026, no new architecture ports). xbyak (x86-only). LLVM MC (heavy, API churn). Hand-rolled per-arch emitter (more upfront work, no portability win over sljit).
 
-### 4.2 Measurement: timing-only
+### 4.2 Measurement: timing-only, with optional cycle conversion
 
-Free-running counters read from user mode:
+**Two layers** of measurement convert raw counter reads into the user-facing unit:
+
+**Layer 1 — counter ticks.** Free-running counters read from user mode:
 
 | Arch / OS | Primitive |
 |---|---|
@@ -163,7 +169,19 @@ Free-running counters read from user mode:
 | ARM64 Linux/Android | `mrs CNTVCT_EL0` |
 | ARM64 macOS | `CNTVCT_EL0` (or `mach_absolute_time`) |
 
-These read free-running counters at fixed frequency. They yield wall ticks, not core cycles. For cliff detection this is sufficient: when the workload is frontend-bound, time tracks frontend cost linearly. The CSV column is named `ticks_*` (not `cycles_*`) and the plot axis is labelled "cycles per site (TSC ticks)" so the unit is honest.
+These read free-running counters at fixed frequency. They yield wall ticks, not core cycles.
+
+**Layer 2 — ticks → nanoseconds.** Always derivable:
+- x86: TSC frequency calibrated once at startup against `clock_gettime(CLOCK_MONOTONIC_RAW)` over a brief (~10 ms) window.
+- ARM64: read `cntfrq_el0` for the architectural counter frequency directly (no calibration needed).
+
+Result: every measurement has a well-defined `ns_per_site_*` value.
+
+**Layer 3 — nanoseconds → cycles.** Opt-in only, via the `--freq` CLI flag. ferret never auto-probes the running frequency silently — the user is expected to run the `dependent_chain_throughput` benchmark first (see Section 5.3), read the result, and pass the frequency back via `--freq=4.521GHz` (or `--freq=4521000000` Hz). When `--freq` is provided, ferret emits `cycles_per_site_*` columns alongside the `ns_per_site_*` columns. When omitted, only the `ns_per_site_*` columns are populated and the plot script defaults to a nanosecond Y-axis.
+
+**Caveats documented in the README:**
+- Frequency varies dynamically (turbo, P-states). The probe captures one snapshot. The user is responsible for pinning probe and target run to the same core, with the same warmup pattern, so the captured frequency reflects the running state of the actual benchmark.
+- The probe assumes dependent-ADD latency = 1 cycle (true on all common high-perf and in-order ARM cores; pathological architectures excluded).
 
 PMU access was considered and **rejected** for v1: cross-vendor event-set heterogeneity breaks portability. May be added as an optional secondary signal in a later release.
 
@@ -273,7 +291,7 @@ Native jobs validate the FetchContent fallback path. The Nix job validates the f
 
 Android NDK cross-compile in CI is deferred to v1.1.
 
-## 5. The v1 microbenchmark: `direct_branch_footprint`
+## 5. v1 microbenchmarks
 
 ### 5.1 Naming convention
 
@@ -281,7 +299,7 @@ Benchmarks are named by the **workload pattern** they emit, not by the microarch
 
 Inferences ("this looks like a 4096-entry BTB cliff") happen in plot titles, README commentary, and analysis docs — never in benchmark identifiers.
 
-### 5.2 What it measures
+### 5.2 `direct_branch_footprint` — what it measures
 
 The kernel emits N unconditional direct branches, each at a distinct PC, all visited in a tight loop:
 
@@ -301,7 +319,7 @@ Padding is multi-byte NOPs sized to reach the requested per-branch spacing. Each
 
 Per-site cost is flat as long as N branches fit in the BTB (or equivalent target-lookup structure). When N exceeds capacity, lookups miss, the recovery penalty is paid, and per-site cost steps to a higher plateau. The cliff position is the structure's capacity.
 
-### 5.3 Sweep axes
+#### Sweep axes
 
 | Axis | Values | Purpose |
 |---|---|---|
@@ -315,7 +333,7 @@ CLI override syntax for axis values:
 - `--axis=v1,v2,...` — explicit value list (e.g. `--branches=1,2,4,8` or `--spacing=64`).
 - omitted axis — full default range from `axes()`.
 
-### 5.4 Class shape
+#### Class shape
 
 ```cpp
 struct DirectBranchFootprint : Benchmark {
@@ -338,29 +356,109 @@ FERRET_BENCHMARK("direct_branch_footprint", DirectBranchFootprint);
 
 `iterations()` aims for roughly ~10ms of work per measurement at expected per-branch costs, traded off against `branches`. `emit_kernel()` uses sljit to emit the labeled jump chain plus padding plus the outer `iters` loop, leaving label-fixup bookkeeping to a small helper.
 
+### 5.3 `dependent_chain_throughput` — frequency probe
+
+A benchmark whose primary purpose is to let the user **measure the running CPU frequency of a specific core** so that subsequent ferret runs can report `cycles_per_site` instead of `ns_per_site`.
+
+#### What it measures
+
+The kernel emits a long sequence of dependent ADD operations on a single register, run inside a tight loop. Every operation depends on its predecessor, so on any common core (out-of-order high-perf or in-order ARM Cortex-A class) the chain executes at exactly **1 cycle per op**.
+
+```
+loop_top:
+  add  r0, r0, r1   ; chain_length consecutive dependent ADDs
+  add  r0, r0, r1
+  ...
+  add  r0, r0, r1
+  // outer loop counter decrement + branch
+  jne loop_top
+```
+
+ferret times this with `arch_now_ticks()` and converts to ns via the calibrated tick→ns rate. Because the kernel is exactly 1 op/cycle by construction, `1 / ns_per_site` is the effective core frequency in GHz.
+
+#### Sweep axis
+
+| Axis | Default | Purpose |
+|---|---|---|
+| `chain_length` | 10⁸ ops total (loop count × inner chain length) | runtime length; longer = more averaging, slower probe |
+
+The probe runs as a single-point measurement by default. Override via `--chain-length=N` if needed.
+
+#### Workflow
+
+```sh
+# Step 1: probe the running frequency on core 3
+$ ferret run dependent_chain_throughput --core=3 --out=freq.csv
+$ python scripts/freq.py freq.csv
+estimated_freq=4.521GHz   # script prints this; user copies it
+
+# Step 2: run the actual benchmark with --freq, pinned to the same core
+$ ferret run direct_branch_footprint --core=3 --branches=1..32768 \
+    --freq=4.521GHz --out=btb.csv
+
+# Step 3: plot — picks cycles_per_site automatically because freq was set
+$ python scripts/plot.py btb.csv
+```
+
+#### Class shape
+
+```cpp
+struct DependentChainThroughput : Benchmark {
+  SweepAxes axes() const override {
+    return { Axis::values("chain_length", {100'000'000}) };  // overridable
+  }
+  size_t sites_per_kernel(const Params& p) const override {
+    return p.get<size_t>("chain_length");
+  }
+  size_t iterations(const Params& p) const override { return 1; }
+  void emit_kernel(sljit_compiler* c, const Params& p) override;
+};
+FERRET_BENCHMARK("dependent_chain_throughput", DependentChainThroughput);
+```
+
+The `chain_length` value is folded into the JIT'd kernel directly (one ADD instruction per chain step, plus one outer loop branch). `sites_per_kernel` returns the chain length so the per-site computation gives `ns_per_site` ≈ ns/cycle.
+
+#### Caveats
+
+- **1 op/cycle assumption.** Holds on all common cores. Wider-issue cores can issue 2+ ADDs per cycle if independent — the dependency chain prevents this.
+- **Frequency stability.** The probe captures a single snapshot. Run the probe and the target benchmark on the same pinned core back-to-back, after equivalent warmup, to keep boost/P-state aligned.
+- **Heterogeneous cores.** Apple P/E and ARM big.LITTLE need explicit `--core=` so the user knows which core's frequency they probed.
+- **Documentation responsibility.** The README explicitly walks the user through the two-step workflow.
+
 ## 6. Output
 
 ### 6.1 CSV schema
 
 One row per parameter point. Columns:
 
-| Column | Meaning |
-|---|---|
-| `benchmark` | Benchmark name (e.g., `direct_branch_footprint`) |
-| `<axis cols>` | One column per axis defined by the benchmark (e.g., `branches`, `spacing_bytes`) |
-| `ticks_min` | Minimum measured tick delta over K repetitions |
-| `ticks_median` | Median tick delta over K repetitions |
-| `iters` | Kernel iterations baked into the JIT'd code per `fn()` call |
-| `sites_per_iter` | Operations per kernel iteration (= `sites_per_kernel(p)`) |
-| `reps` | Number of measurement repetitions K |
-| `ticks_per_site_min` | `ticks_min / (iters * sites_per_iter)` — the primary Y-axis value |
-| `ticks_per_site_median` | `ticks_median / (iters * sites_per_iter)` — sanity check |
+| Column | Always emitted? | Meaning |
+|---|---|---|
+| `benchmark` | yes | Benchmark name (e.g., `direct_branch_footprint`) |
+| `<axis cols>` | yes | One column per axis defined by the benchmark (e.g., `branches`, `spacing_bytes`) |
+| `ticks_min` | yes | Minimum measured tick delta over K repetitions |
+| `ticks_median` | yes | Median tick delta over K repetitions |
+| `iters` | yes | Kernel iterations baked into the JIT'd code per `fn()` call |
+| `sites_per_iter` | yes | Operations per kernel iteration (= `sites_per_kernel(p)`) |
+| `reps` | yes | Number of measurement repetitions K |
+| `ns_per_site_min` | yes | `(ticks_min / (iters * sites_per_iter)) / ticks_per_ns` |
+| `ns_per_site_median` | yes | same, using median |
+| `cycles_per_site_min` | only when `--freq` set | `ns_per_site_min * freq_GHz` |
+| `cycles_per_site_median` | only when `--freq` set | `ns_per_site_median * freq_GHz` |
+| `freq_hz` | only when `--freq` set | The frequency value the user supplied, in Hz, for traceability |
 
-Failed JIT (rare) writes a row with empty `ticks_*` columns — the sweep continues.
+When `--freq` is supplied, the cycle columns are populated and become the primary Y-axis. When omitted, the cycle columns are absent and the plot script falls back to `ns_per_site_*`.
+
+Failed JIT (rare) writes a row with empty `ticks_*` / `ns_per_site_*` / `cycles_per_site_*` columns — the sweep continues.
 
 ### 6.2 Plot script
 
-`scripts/plot.py` (matplotlib + pandas) reads the CSV, picks one column as X (the swept axis), `ticks_per_site_min` as Y, and any remaining axis columns as series. Default invocation: `python scripts/plot.py btb.csv`. Script is independent of ferret's binary and runs against any conformant CSV.
+`scripts/plot.py` (matplotlib + pandas) reads the CSV, picks one column as X (the swept axis), and selects Y as follows:
+- if `cycles_per_site_min` is present and non-empty → Y is **cycles per site**, axis labelled "cycles per site"
+- otherwise → Y is `ns_per_site_min`, axis labelled "ns per site"
+
+Any remaining axis columns become series (one curve per value). Default invocation: `python scripts/plot.py btb.csv`. Script is independent of ferret's binary and runs against any conformant CSV.
+
+A small helper `scripts/freq.py` reads a `dependent_chain_throughput` CSV and prints `estimated_freq=<X>GHz` so the user can copy-paste it into the next `ferret run --freq=...` invocation.
 
 ## 7. Error handling
 
@@ -386,7 +484,7 @@ The runner does **not** wrap `fn()` in `try`/`catch`. If a generated kernel segf
 
 ### 8.2 Integration test
 
-One end-to-end smoke: run `direct_branch_footprint --branches=1,2,4,8 --spacing=64 --out=/tmp/x.csv`, assert the CSV has 4 rows with monotonically non-zero `ticks_per_site_min`. Shipped as a CTest entry.
+One end-to-end smoke: run `direct_branch_footprint --branches=1,2,4,8 --spacing=64 --out=/tmp/x.csv`, assert the CSV has 4 rows with non-zero `ns_per_site_min`. A second CTest entry runs `dependent_chain_throughput --out=/tmp/freq.csv` and asserts a single non-empty row.
 
 ### 8.3 Manual validation (not in CI)
 
@@ -401,3 +499,4 @@ CI runs unit + integration tests on every matrix entry (Ubuntu x86_64, Ubuntu AR
 - RISC-V and LoongArch backend enablement (sljit covers them; the work is build matrix + testing).
 - Android NDK cross-compile in CI.
 - Config-driven sweeps for end-users who want to vary parameters without recompiling.
+- Auto-frequency-probe mode that runs `dependent_chain_throughput` immediately before the target benchmark on the same pinned core, so the user doesn't have to copy-paste the frequency by hand.
