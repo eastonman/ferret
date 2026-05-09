@@ -75,6 +75,7 @@ add_library(ferret_core STATIC
   src/pinning/linux.cpp
   src/pinning/macos.cpp
   src/benchmark_registry.cpp
+  src/output/csv.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
 target_compile_features(ferret_core PUBLIC cxx_std_20)

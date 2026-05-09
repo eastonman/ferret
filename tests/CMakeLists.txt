@@ -52,3 +52,10 @@ target_link_libraries(test_benchmark_registry PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_benchmark_registry)
+
+add_executable(test_csv test_csv.cpp)
+target_link_libraries(test_csv PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_csv)
