@@ -150,18 +150,29 @@ int do_run(const std::string& name,
   double tpns = ferret::timing::ticks_per_ns();
 
   for (const auto& p : rows) {
-    auto kern = jit_compile(*bench, p);
     ferret::MeasurementRow m;
-    if (!kern.code) {
-      m.jit_failed = true;
-      m.iters = bench->iterations(p);
-      m.sites = bench->sites_per_kernel(p);
-      std::cerr << "ferret: sljit_error on params; emitting empty row\n";
-    } else {
-      auto fn = reinterpret_cast<void (*)(void)>(kern.code);
-      m = ferret::runner::measure(fn, bench->iterations(p),
-                                  bench->sites_per_kernel(p), K, warmup);
+    JittedKernel kern;
+    try {
+      kern = jit_compile(*bench, p);
+      if (!kern.code) {
+        m.jit_failed = true;
+        m.iters = bench->iterations(p);
+        m.sites = bench->sites_per_kernel(p);
+        std::cerr << "ferret: sljit_error on params; emitting empty row\n";
+      } else {
+        auto fn = reinterpret_cast<void (*)(void)>(kern.code);
+        m = ferret::runner::measure(fn, bench->iterations(p),
+                                    bench->sites_per_kernel(p), K, warmup);
+        jit_free(kern);
+      }
+    } catch (const std::exception& e) {
+      // Out-of-range/extreme benchmark parameters can blow up vector
+      // allocations inside emit_kernel (e.g., direct_branch_footprint
+      // sizing per-branch label/jump vectors). Translate to a config
+      // error so the process exits cleanly instead of aborting.
       jit_free(kern);
+      std::cerr << "ferret: benchmark error on params: " << e.what() << "\n";
+      return 2;
     }
     writer.write_row(p, m, tpns);
     out_stream->flush();

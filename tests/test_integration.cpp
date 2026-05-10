@@ -98,3 +98,45 @@ TEST(Integration, NegativeRepsExitsTwoNoCrash) {
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
 }
+
+TEST(Integration, ZeroBranchesExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_branches0_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=0 --spacing_bytes=64 --reps=2 --warmup=1"
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}
+
+TEST(Integration, NegativeBranchesExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_branchesNeg_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=-1 --spacing_bytes=64 --reps=2 --warmup=1"
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}
+
+TEST(Integration, HugeBranchesExitsTwoNoCrash) {
+  // Extreme positive value: log2 axis accepts it (positive), but the
+  // benchmark allocator throws std::length_error / std::bad_alloc.
+  // do_run must catch and translate to exit 2.
+  auto err = std::filesystem::temp_directory_path() / "ferret_branchesHuge_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}

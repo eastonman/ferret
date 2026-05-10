@@ -49,3 +49,30 @@ TEST(CliAxis, Log2RangeRejectsNegativeLo) {
   EXPECT_THROW((void)parse_cli_axis_value("-1..8", branches),
                std::invalid_argument);
 }
+
+TEST(CliAxis, Log2SingleValueRejectsZero) {
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  EXPECT_THROW((void)parse_cli_axis_value("0", branches),
+               std::invalid_argument);
+}
+
+TEST(CliAxis, Log2SingleValueRejectsNegative) {
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  EXPECT_THROW((void)parse_cli_axis_value("-1", branches),
+               std::invalid_argument);
+}
+
+TEST(CliAxis, Log2ListRejectsAnyNonPositive) {
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  EXPECT_THROW((void)parse_cli_axis_value("1,2,0,4", branches),
+               std::invalid_argument);
+  EXPECT_THROW((void)parse_cli_axis_value("4,-2", branches),
+               std::invalid_argument);
+}
+
+TEST(CliAxis, RangeAxisAcceptsZeroAndNegativeLists) {
+  // Non-log2 ranges have no positivity requirement.
+  Axis x = Axis::range("x", -10, 10);
+  auto v = parse_cli_axis_value("-3,0,5", x);
+  EXPECT_EQ(v, (std::vector<int64_t>{-3, 0, 5}));
+}

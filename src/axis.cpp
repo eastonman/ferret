@@ -1,6 +1,7 @@
 #include "ferret/axis.hpp"
 #include "ferret/params.hpp"
 
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -53,22 +54,20 @@ std::vector<int64_t> Axis::expand() const {
     case Kind::Range:
       for (int64_t v = lo_; v <= hi_; ++v) out.push_back(v);
       return out;
-    case Kind::Log2Range:
+    case Kind::Log2Range: {
       if (lo_ <= 0) {
         throw std::invalid_argument(
             "Axis '" + name_ + "': log2 range requires lo > 0");
       }
-      // Multiplication-overflow / non-progress guard: stop when the next
-      // value would not strictly exceed the current one (i.e., multiply
-      // would wrap or saturate). This protects against int64_t overflow
-      // for callers who pass a large hi_.
+      // Pre-multiply overflow check (avoids signed overflow UB).
+      constexpr int64_t kHalfMax = std::numeric_limits<int64_t>::max() / 2;
       for (int64_t v = lo_; v <= hi_; ) {
         out.push_back(v);
-        int64_t next = v * 2;
-        if (next <= v) break;
-        v = next;
+        if (v > kHalfMax) break;
+        v *= 2;
       }
       return out;
+    }
     case Kind::Values:
       return values_;
   }
