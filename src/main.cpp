@@ -149,22 +149,16 @@ int do_run(const std::string& name,
 
   std::vector<std::string> axis_cols;
   for (const auto& a : axes) axis_cols.push_back(a.name());
-  ferret::CsvWriter writer(*out_stream, name, axis_cols, freq_hz);
-
-  // Lazy header emission: written exactly once, immediately before the
-  // first row that survives both jit_compile and the timing loop.
-  // Spec §7 class-1 says configuration errors must produce no partial
-  // output; if the first param point throws a benchmark exception, we
-  // exit 2 with stdout/CSV file completely empty.
-  bool header_written = false;
-  auto ensure_header = [&]() {
-    if (!header_written) {
-      writer.write_header();
-      header_written = true;
-    }
-  };
 
   double tpns = ferret::timing::ticks_per_ns();
+
+  // Buffer-then-flush: spec §7 class-1 says benchmark-parameter errors
+  // must produce no partial output. Collect every row's measurement in
+  // memory; if any row throws a benchmark exception, return exit 2
+  // with the output file/stdout left empty. Only after the full sweep
+  // completes without exceptions do we emit the header and rows.
+  std::vector<std::pair<ferret::Params, ferret::MeasurementRow>> buffered;
+  buffered.reserve(rows.size());
 
   for (const auto& p : rows) {
     ferret::MeasurementRow m;
@@ -186,15 +180,22 @@ int do_run(const std::string& name,
       // Out-of-range/extreme benchmark parameters can blow up vector
       // allocations inside emit_kernel (e.g., direct_branch_footprint
       // sizing per-branch label/jump vectors). Translate to a config
-      // error so the process exits cleanly instead of aborting.
+      // error so the process exits cleanly instead of aborting. The
+      // file/stdout remains empty because no buffered row has been
+      // flushed yet.
       jit_free(kern);
       std::cerr << "ferret: benchmark error on params: " << e.what() << "\n";
       return 2;
     }
-    ensure_header();
-    writer.write_row(p, m, tpns);
-    out_stream->flush();
+    buffered.emplace_back(p, m);
   }
+
+  ferret::CsvWriter writer(*out_stream, name, axis_cols, freq_hz);
+  writer.write_header();
+  for (const auto& [p, m] : buffered) {
+    writer.write_row(p, m, tpns);
+  }
+  out_stream->flush();
 
   return 0;
 }

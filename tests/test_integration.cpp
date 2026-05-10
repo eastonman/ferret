@@ -147,6 +147,47 @@ TEST(Integration, HugeBranchesExitsTwoNoCrash) {
       << "expected stdout to be empty (no partial CSV), got: " << out_contents;
 }
 
+TEST(Integration, MixedSweepHugeRowExitsTwoNoPartialOutput) {
+  // First sweep value succeeds; second is a huge log2 value that throws
+  // inside emit_kernel. Buffer-then-flush semantics require the output
+  // file/stdout to stay empty even though earlier rows succeeded.
+  auto out = std::filesystem::temp_directory_path() / "ferret_mix_out.txt";
+  auto err = std::filesystem::temp_directory_path() / "ferret_mix_err.txt";
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+      " > " + out.string() + " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  std::string out_contents = slurp(out.string());
+  EXPECT_TRUE(out_contents.empty())
+      << "expected stdout empty (no partial CSV from earlier successful row), got: "
+      << out_contents;
+}
+
+TEST(Integration, MixedSweepHugeRowOutFileStaysEmpty) {
+  // Same scenario but with --out=PATH. The file must end empty so the
+  // user doesn't get a misleading partial CSV.
+  auto out = std::filesystem::temp_directory_path() / "ferret_mix_outfile.csv";
+  auto err = std::filesystem::temp_directory_path() / "ferret_mix_outfile_err.txt";
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+      " --out=" + out.string() +
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  ASSERT_TRUE(std::filesystem::exists(out));
+  EXPECT_EQ(0u, std::filesystem::file_size(out))
+      << "expected output file empty (no partial CSV)";
+}
+
 TEST(Integration, FreqInfExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_freqInf_err.txt";
   std::filesystem::remove(err);
