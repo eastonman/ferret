@@ -55,3 +55,21 @@ TEST(SweepExpand, EmptyAxesProduceOneEmptyRow) {
   ASSERT_EQ(rows.size(), 1u);
   EXPECT_EQ(rows[0].size(), 0u);
 }
+
+TEST(SweepExpand, EmptyAxisValuesThrows) {
+  // A benchmark declaring Axis::values("x", {}) — or a future parser
+  // change producing an empty value list — must fail fast rather than
+  // index out of bounds.
+  SweepAxes axes = { Axis::values("x", {}) };
+  EXPECT_THROW((void)sweep::expand(axes, {}), std::invalid_argument);
+}
+
+TEST(SweepExpand, EmptyOverrideThrows) {
+  // An override that resolves to an empty list (e.g., parser bug) must
+  // also be rejected — the same invariant applies regardless of source.
+  SweepAxes axes = { Axis::values("x", {1, 2, 3}) };
+  std::map<std::string, std::vector<int64_t>> overrides = {
+    {"x", {}},
+  };
+  EXPECT_THROW((void)sweep::expand(axes, overrides), std::invalid_argument);
+}

@@ -125,7 +125,13 @@ int do_run(const std::string& name,
     }
   }
 
-  auto rows = ferret::sweep::expand(axes, overrides);
+  std::vector<ferret::Params> rows;
+  try {
+    rows = ferret::sweep::expand(axes, overrides);
+  } catch (const std::exception& e) {
+    std::cerr << "ferret: invalid sweep: " << e.what() << "\n";
+    return 2;
+  }
 
   if (core >= 0) {
     if (!ferret::pinning::pin_to_core(core))
@@ -150,7 +156,16 @@ int do_run(const std::string& name,
   std::vector<std::string> axis_cols;
   for (const auto& a : axes) axis_cols.push_back(a.name());
 
+  // ticks_per_ns() is the divisor for every CSV row's per-site cost.
+  // Zero or non-finite calibration would propagate as inf/nan into the
+  // CSV output, breaking downstream tooling. Validate up-front so the
+  // user sees a clean exit-2 runtime error instead of garbage numbers.
   double tpns = ferret::timing::ticks_per_ns();
+  if (!std::isfinite(tpns) || !(tpns > 0.0)) {
+    std::cerr << "ferret: ticks_per_ns calibration returned non-finite "
+                 "or non-positive value: " << tpns << "\n";
+    return 2;
+  }
 
   // Buffer-then-flush: spec §7 class-1 says benchmark-parameter errors
   // must produce no partial output. Collect every row's measurement in
