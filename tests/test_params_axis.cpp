@@ -51,3 +51,13 @@ TEST(Axis, ValuesPreservesOrder) {
   Axis a = Axis::values("spacing_bytes", {16, 32, 64, 128});
   EXPECT_EQ(a.expand(), (std::vector<int64_t>{16, 32, 64, 128}));
 }
+
+TEST(Axis, Log2RangeWithZeroLoThrows) {
+  Axis a = Axis::log2_range("branches", 0, 8);
+  EXPECT_THROW((void)a.expand(), std::invalid_argument);
+}
+
+TEST(Axis, Log2RangeWithNegativeLoThrows) {
+  Axis a = Axis::log2_range("branches", -1, 8);
+  EXPECT_THROW((void)a.expand(), std::invalid_argument);
+}

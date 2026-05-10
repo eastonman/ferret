@@ -3,12 +3,19 @@
 #include "ferret/timing.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 namespace ferret::runner {
 
 MeasurementRow measure(KernelFn fn, size_t iters, size_t sites,
                        int K, int warmup) {
+  if (K <= 0) {
+    throw std::invalid_argument("runner::measure: K (reps) must be >= 1");
+  }
+  if (warmup < 0) {
+    throw std::invalid_argument("runner::measure: warmup must be >= 0");
+  }
   MeasurementRow row;
   row.iters = iters;
   row.sites = sites;

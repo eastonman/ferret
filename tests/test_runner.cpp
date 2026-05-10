@@ -38,3 +38,15 @@ TEST(Runner, KernelInvokedAtLeastWarmupPlusKTimes) {
   runner::measure(count, 1, 1, /*K=*/4, /*warmup=*/2);
   EXPECT_EQ(counter, 2 + 4);
 }
+
+TEST(Runner, RejectsNonPositiveK) {
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/0, /*warmup=*/1),
+               std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/-1, /*warmup=*/1),
+               std::invalid_argument);
+}
+
+TEST(Runner, RejectsNegativeWarmup) {
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/3, /*warmup=*/-1),
+               std::invalid_argument);
+}

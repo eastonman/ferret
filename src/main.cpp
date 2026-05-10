@@ -22,6 +22,7 @@ extern "C" {
 
 namespace {
 
+// Throws std::invalid_argument for malformed input or non-positive values.
 double parse_freq(const std::string& s) {
   std::string num = s;
   double mult = 1.0;
@@ -36,7 +37,25 @@ double parse_freq(const std::string& s) {
   };
   strip_suffix("GHz", 1e9) || strip_suffix("MHz", 1e6) ||
       strip_suffix("kHz", 1e3) || strip_suffix("Hz", 1.0);
-  return std::stod(num) * mult;
+
+  if (num.empty()) {
+    throw std::invalid_argument("--freq: empty numeric component: " + s);
+  }
+  size_t consumed = 0;
+  double val = 0.0;
+  try {
+    val = std::stod(num, &consumed);
+  } catch (const std::exception&) {
+    throw std::invalid_argument("--freq: not a number: " + s);
+  }
+  if (consumed != num.size()) {
+    throw std::invalid_argument("--freq: trailing junk after number: " + s);
+  }
+  double hz = val * mult;
+  if (!(hz > 0.0)) {
+    throw std::invalid_argument("--freq: must be positive: " + s);
+  }
+  return hz;
 }
 
 struct JittedKernel {
@@ -188,6 +207,15 @@ int main(int argc, char** argv) {
   if (*list_cmd) return do_list();
 
   if (*run_cmd) {
+    if (K < 1) {
+      std::cerr << "ferret: --reps must be >= 1 (got " << K << ")\n";
+      return 2;
+    }
+    if (warmup < 0) {
+      std::cerr << "ferret: --warmup must be >= 0 (got " << warmup << ")\n";
+      return 2;
+    }
+
     std::map<std::string, std::string> overrides;
     for (const auto& tok : run_cmd->remaining()) {
       if (tok.size() < 3 || tok[0] != '-' || tok[1] != '-') {
@@ -202,8 +230,16 @@ int main(int argc, char** argv) {
       }
       overrides[tok.substr(2, eq - 2)] = tok.substr(eq + 1);
     }
+
     std::optional<double> freq_hz;
-    if (!freq_str.empty()) freq_hz = parse_freq(freq_str);
+    if (!freq_str.empty()) {
+      try {
+        freq_hz = parse_freq(freq_str);
+      } catch (const std::exception& e) {
+        std::cerr << "ferret: invalid " << e.what() << "\n";
+        return 2;
+      }
+    }
     return do_run(name, overrides, out_path, core, freq_hz, K, warmup);
   }
 

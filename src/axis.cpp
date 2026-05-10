@@ -54,7 +54,20 @@ std::vector<int64_t> Axis::expand() const {
       for (int64_t v = lo_; v <= hi_; ++v) out.push_back(v);
       return out;
     case Kind::Log2Range:
-      for (int64_t v = lo_; v <= hi_; v *= 2) out.push_back(v);
+      if (lo_ <= 0) {
+        throw std::invalid_argument(
+            "Axis '" + name_ + "': log2 range requires lo > 0");
+      }
+      // Multiplication-overflow / non-progress guard: stop when the next
+      // value would not strictly exceed the current one (i.e., multiply
+      // would wrap or saturate). This protects against int64_t overflow
+      // for callers who pass a large hi_.
+      for (int64_t v = lo_; v <= hi_; ) {
+        out.push_back(v);
+        int64_t next = v * 2;
+        if (next <= v) break;
+        v = next;
+      }
       return out;
     case Kind::Values:
       return values_;

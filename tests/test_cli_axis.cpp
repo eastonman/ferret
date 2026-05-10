@@ -36,3 +36,16 @@ TEST(CliAxis, MalformedThrows) {
   EXPECT_THROW((void)parse_cli_axis_value("..5", x), std::invalid_argument);
   EXPECT_THROW((void)parse_cli_axis_value("5..3", x), std::invalid_argument);
 }
+
+TEST(CliAxis, Log2RangeRejectsZeroLo) {
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  // 0..N on a log2 axis is meaningless (multiplication never progresses)
+  EXPECT_THROW((void)parse_cli_axis_value("0..8", branches),
+               std::invalid_argument);
+}
+
+TEST(CliAxis, Log2RangeRejectsNegativeLo) {
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  EXPECT_THROW((void)parse_cli_axis_value("-1..8", branches),
+               std::invalid_argument);
+}

@@ -8,6 +8,10 @@
 #include <sstream>
 #include <string>
 
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/wait.h>
+#endif
+
 #ifndef FERRET_BINARY
 #error "FERRET_BINARY must be defined"
 #endif
@@ -55,4 +59,42 @@ TEST(Integration, DependentChainThroughputProducesOneRow) {
   std::string contents = slurp(out.string());
   size_t newlines = std::count(contents.begin(), contents.end(), '\n');
   EXPECT_EQ(newlines, 2u);
+}
+
+// Process exit code returned by std::system on POSIX is encoded —
+// WEXITSTATUS extracts the actual program exit code.
+namespace {
+int actual_exit_code(int sys_status) {
+#if defined(__unix__) || defined(__APPLE__)
+  if (WIFEXITED(sys_status)) return WEXITSTATUS(sys_status);
+  return -1;
+#else
+  return sys_status;
+#endif
+}
+}  // namespace
+
+TEST(Integration, InvalidFreqExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_freq_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+      " --freq=bogus 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2 (config error), got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos)
+      << "stderr did not contain a 'ferret:' message: " << err_contents;
+}
+
+TEST(Integration, NegativeRepsExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_reps_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,2 --spacing_bytes=64 --reps=0 --warmup=1"
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
 }

@@ -34,7 +34,17 @@ std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value,
     }
     std::vector<int64_t> out;
     if (axis.kind() == Axis::Kind::Log2Range) {
-      for (int64_t v = lo; v <= hi; v *= 2) out.push_back(v);
+      if (lo <= 0) {
+        throw std::invalid_argument(
+            "log2 range requires lo > 0: " + cli_value);
+      }
+      // Multiplication overflow / non-progress guard.
+      for (int64_t v = lo; v <= hi; ) {
+        out.push_back(v);
+        int64_t next = v * 2;
+        if (next <= v) break;
+        v = next;
+      }
     } else {
       for (int64_t v = lo; v <= hi; ++v) out.push_back(v);
     }
