@@ -128,15 +128,102 @@ TEST(Integration, NegativeBranchesExitsTwoNoCrash) {
 TEST(Integration, HugeBranchesExitsTwoNoCrash) {
   // Extreme positive value: log2 axis accepts it (positive), but the
   // benchmark allocator throws std::length_error / std::bad_alloc.
-  // do_run must catch and translate to exit 2.
+  // do_run must catch and translate to exit 2 AND must not have leaked
+  // a CSV header to stdout (spec §7 class-1: no partial output).
+  auto out = std::filesystem::temp_directory_path() / "ferret_branchesHuge_out.txt";
   auto err = std::filesystem::temp_directory_path() / "ferret_branchesHuge_err.txt";
+  std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
       " run direct_branch_footprint"
       " --branches=4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
-      " 2> " + err.string();
+      " > " + out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  std::string out_contents = slurp(out.string());
+  EXPECT_TRUE(out_contents.empty())
+      << "expected stdout to be empty (no partial CSV), got: " << out_contents;
+}
+
+TEST(Integration, FreqInfExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_freqInf_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+      " --freq=inf 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}
+
+TEST(Integration, FreqNanExitsTwoNoCrash) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_freqNan_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run direct_branch_footprint"
+      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+      " --freq=nan 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}
+
+// Sanity: a non-1024-multiple chain_length still produces a measurement
+// with ns_per_site_min in roughly the same ballpark as a 1024-aligned
+// run on the same host. Catches regressions where the tail-emission
+// code drops or duplicates ops.
+TEST(Integration, FreqProbeExactOpCountSanity) {
+  auto out_a = std::filesystem::temp_directory_path() / "ferret_freq_a.csv";
+  auto out_b = std::filesystem::temp_directory_path() / "ferret_freq_b.csv";
+  std::filesystem::remove(out_a);
+  std::filesystem::remove(out_b);
+  std::string cmd_a = std::string(FERRET_BINARY) +
+      " run dependent_chain_throughput"
+      " --chain_length=1024 --reps=5 --warmup=2"
+      " --out=" + out_a.string();
+  std::string cmd_b = std::string(FERRET_BINARY) +
+      " run dependent_chain_throughput"
+      " --chain_length=1000 --reps=5 --warmup=2"
+      " --out=" + out_b.string();
+  ASSERT_EQ(0, run(cmd_a));
+  ASSERT_EQ(0, run(cmd_b));
+
+  // Pull ns_per_site_min from each CSV's only data row.
+  auto extract_ns = [](const std::string& path) -> double {
+    std::ifstream f(path);
+    std::string header, row;
+    std::getline(f, header);
+    std::getline(f, row);
+    // Find the ns_per_site_min column index from the header.
+    std::vector<std::string> cols;
+    std::stringstream hs(header);
+    std::string tok;
+    while (std::getline(hs, tok, ',')) cols.push_back(tok);
+    size_t target = 0;
+    for (; target < cols.size(); ++target)
+      if (cols[target] == "ns_per_site_min") break;
+    EXPECT_LT(target, cols.size());
+    std::stringstream rs(row);
+    std::string val;
+    for (size_t i = 0; std::getline(rs, val, ','); ++i) {
+      if (i == target) return std::stod(val);
+    }
+    return -1.0;
+  };
+
+  double ns_a = extract_ns(out_a.string());
+  double ns_b = extract_ns(out_b.string());
+  ASSERT_GT(ns_a, 0.0);
+  ASSERT_GT(ns_b, 0.0);
+  // Very small chain (1024 ops) is dominated by entry/exit overhead, so
+  // exact equality is unrealistic — but the two values should be in the
+  // same order of magnitude (both ≈ ns/cycle on the host core).
+  double ratio = ns_b / ns_a;
+  EXPECT_GT(ratio, 0.3) << "ns_a=" << ns_a << " ns_b=" << ns_b;
+  EXPECT_LT(ratio, 3.0) << "ns_a=" << ns_a << " ns_b=" << ns_b;
 }

@@ -1,10 +1,12 @@
 #include <CLI/CLI.hpp>
 
+#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -52,6 +54,9 @@ double parse_freq(const std::string& s) {
     throw std::invalid_argument("--freq: trailing junk after number: " + s);
   }
   double hz = val * mult;
+  if (!std::isfinite(hz)) {
+    throw std::invalid_argument("--freq: must be finite: " + s);
+  }
   if (!(hz > 0.0)) {
     throw std::invalid_argument("--freq: must be positive: " + s);
   }
@@ -145,7 +150,19 @@ int do_run(const std::string& name,
   std::vector<std::string> axis_cols;
   for (const auto& a : axes) axis_cols.push_back(a.name());
   ferret::CsvWriter writer(*out_stream, name, axis_cols, freq_hz);
-  writer.write_header();
+
+  // Lazy header emission: written exactly once, immediately before the
+  // first row that survives both jit_compile and the timing loop.
+  // Spec §7 class-1 says configuration errors must produce no partial
+  // output; if the first param point throws a benchmark exception, we
+  // exit 2 with stdout/CSV file completely empty.
+  bool header_written = false;
+  auto ensure_header = [&]() {
+    if (!header_written) {
+      writer.write_header();
+      header_written = true;
+    }
+  };
 
   double tpns = ferret::timing::ticks_per_ns();
 
@@ -174,6 +191,7 @@ int do_run(const std::string& name,
       std::cerr << "ferret: benchmark error on params: " << e.what() << "\n";
       return 2;
     }
+    ensure_header();
     writer.write_row(p, m, tpns);
     out_stream->flush();
   }
