@@ -214,6 +214,28 @@ TEST(Integration, FreqNanExitsTwoNoCrash) {
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
 }
 
+TEST(Integration, ZeroChainLengthExitsTwoNoCrash) {
+  // chain_length=0 yields sites_per_kernel=0, which would divide by
+  // zero in CSV normalization. do_run must reject the param point
+  // pre-flight with exit 2 and leave the output file empty.
+  auto out = std::filesystem::temp_directory_path() / "ferret_chain0.csv";
+  auto err = std::filesystem::temp_directory_path() / "ferret_chain0_err.txt";
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+      " run dependent_chain_throughput"
+      " --chain_length=0 --reps=3 --warmup=1"
+      " --out=" + out.string() +
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  ASSERT_TRUE(std::filesystem::exists(out));
+  EXPECT_EQ(0u, std::filesystem::file_size(out))
+      << "expected output file empty (zero-work param rejected)";
+}
+
 // Sanity: a non-1024-multiple chain_length still produces a measurement
 // with ns_per_site_min in roughly the same ballpark as a 1024-aligned
 // run on the same host. Catches regressions where the tail-emission

@@ -161,6 +161,20 @@ int do_run(const std::string& name,
   buffered.reserve(rows.size());
 
   for (const auto& p : rows) {
+    // Pre-flight: any param point that yields zero work would divide
+    // by zero in CSV normalization (ticks / (iters * sites) → NaN).
+    // Treat as a configuration error per spec §7 — exit 2 with empty
+    // output (the buffer-then-flush invariant guarantees nothing has
+    // been written yet).
+    size_t pre_iters = bench->iterations(p);
+    size_t pre_sites = bench->sites_per_kernel(p);
+    if (pre_iters == 0 || pre_sites == 0) {
+      std::cerr << "ferret: invalid params: yields zero work"
+                << " (iterations=" << pre_iters
+                << ", sites_per_kernel=" << pre_sites << ")\n";
+      return 2;
+    }
+
     ferret::MeasurementRow m;
     JittedKernel kern;
     try {
