@@ -218,13 +218,15 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
   // chain_length=-1 was previously cast through size_t to a huge value,
   // making the kernel loop run effectively forever. Params::get<size_t>
   // now rejects negatives; do_run translates the throw into exit 2.
-  // The test enforces a 5-second wall timeout on the spawned process so
-  // a regression manifests as a CTest timeout rather than a hang.
+  // CTest enforces a per-test wall-clock timeout (set in
+  // tests/CMakeLists.txt via gtest_discover_tests TIMEOUT property) so
+  // a regression manifests as a CTest timeout rather than a hang —
+  // without taking a runtime dependency on a `timeout` binary.
   auto out = std::filesystem::temp_directory_path() / "ferret_chainNeg.csv";
   auto err = std::filesystem::temp_directory_path() / "ferret_chainNeg_err.txt";
   std::filesystem::remove(out);
   std::filesystem::remove(err);
-  std::string cmd = std::string("timeout 5 ") + FERRET_BINARY +
+  std::string cmd = std::string(FERRET_BINARY) +
       " run dependent_chain_throughput"
       " --chain_length=-1 --reps=2 --warmup=1"
       " --out=" + out.string() +
@@ -239,12 +241,13 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
 
 TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
   // spacing_bytes=-1 cast to size_t made emit_nops loop SIZE_MAX times.
-  // Now Params::get<size_t> rejects the negative value.
+  // Now Params::get<size_t> rejects the negative value. CTest TIMEOUT
+  // property (see tests/CMakeLists.txt) catches any regression.
   auto out = std::filesystem::temp_directory_path() / "ferret_spacingNeg.csv";
   auto err = std::filesystem::temp_directory_path() / "ferret_spacingNeg_err.txt";
   std::filesystem::remove(out);
   std::filesystem::remove(err);
-  std::string cmd = std::string("timeout 5 ") + FERRET_BINARY +
+  std::string cmd = std::string(FERRET_BINARY) +
       " run direct_branch_footprint"
       " --branches=1,2 --spacing_bytes=-1 --reps=2 --warmup=1"
       " --out=" + out.string() +
