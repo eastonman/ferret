@@ -161,40 +161,40 @@ int do_run(const std::string& name,
   buffered.reserve(rows.size());
 
   for (const auto& p : rows) {
-    // Pre-flight: any param point that yields zero work would divide
-    // by zero in CSV normalization (ticks / (iters * sites) → NaN).
-    // Treat as a configuration error per spec §7 — exit 2 with empty
-    // output (the buffer-then-flush invariant guarantees nothing has
-    // been written yet).
-    size_t pre_iters = bench->iterations(p);
-    size_t pre_sites = bench->sites_per_kernel(p);
-    if (pre_iters == 0 || pre_sites == 0) {
-      std::cerr << "ferret: invalid params: yields zero work"
-                << " (iterations=" << pre_iters
-                << ", sites_per_kernel=" << pre_sites << ")\n";
-      return 2;
-    }
-
     ferret::MeasurementRow m;
     JittedKernel kern;
     try {
+      // Pre-flight: any param point that yields zero work would divide
+      // by zero in CSV normalization. The Params::get<size_t> calls
+      // here may also throw std::invalid_argument when an axis override
+      // smuggled in a negative value (e.g., --chain_length=-1) — that
+      // throw is funneled through the same catch block so the user
+      // sees an exit-2 config error instead of a hang or abort.
+      size_t pre_iters = bench->iterations(p);
+      size_t pre_sites = bench->sites_per_kernel(p);
+      if (pre_iters == 0 || pre_sites == 0) {
+        std::cerr << "ferret: invalid params: yields zero work"
+                  << " (iterations=" << pre_iters
+                  << ", sites_per_kernel=" << pre_sites << ")\n";
+        return 2;
+      }
+
       kern = jit_compile(*bench, p);
       if (!kern.code) {
         m.jit_failed = true;
-        m.iters = bench->iterations(p);
-        m.sites = bench->sites_per_kernel(p);
+        m.iters = pre_iters;
+        m.sites = pre_sites;
         std::cerr << "ferret: sljit_error on params; emitting empty row\n";
       } else {
         auto fn = reinterpret_cast<void (*)(void)>(kern.code);
-        m = ferret::runner::measure(fn, bench->iterations(p),
-                                    bench->sites_per_kernel(p), K, warmup);
+        m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
         jit_free(kern);
       }
     } catch (const std::exception& e) {
       // Out-of-range/extreme benchmark parameters can blow up vector
-      // allocations inside emit_kernel (e.g., direct_branch_footprint
-      // sizing per-branch label/jump vectors). Translate to a config
-      // error so the process exits cleanly instead of aborting. The
+      // allocations inside emit_kernel, or smuggle negative values
+      // through Params::get<size_t>. Translate to a config error so
+      // the process exits cleanly instead of aborting/hanging. The
       // file/stdout remains empty because no buffered row has been
       // flushed yet.
       jit_free(kern);

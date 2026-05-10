@@ -17,6 +17,22 @@ TEST(Params, MissingKeyThrows) {
   EXPECT_THROW((void)p.get<int64_t>("nope"), std::out_of_range);
 }
 
+TEST(Params, GetUnsignedRejectsNegative) {
+  Params p;
+  p.set("x", -1);
+  EXPECT_THROW((void)p.get<size_t>("x"), std::invalid_argument);
+  EXPECT_THROW((void)p.get<unsigned>("x"), std::invalid_argument);
+  // Signed get is fine — no implicit positivity contract.
+  EXPECT_EQ(p.get<int64_t>("x"), -1);
+  EXPECT_EQ(p.get<int>("x"), -1);
+}
+
+TEST(Params, GetUnsignedAllowsZero) {
+  Params p;
+  p.set("x", 0);
+  EXPECT_EQ(p.get<size_t>("x"), 0u);
+}
+
 TEST(Params, KeysAreOrderedByInsertion) {
   Params p;
   p.set("a", 1);

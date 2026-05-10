@@ -214,6 +214,49 @@ TEST(Integration, FreqNanExitsTwoNoCrash) {
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
 }
 
+TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
+  // chain_length=-1 was previously cast through size_t to a huge value,
+  // making the kernel loop run effectively forever. Params::get<size_t>
+  // now rejects negatives; do_run translates the throw into exit 2.
+  // The test enforces a 5-second wall timeout on the spawned process so
+  // a regression manifests as a CTest timeout rather than a hang.
+  auto out = std::filesystem::temp_directory_path() / "ferret_chainNeg.csv";
+  auto err = std::filesystem::temp_directory_path() / "ferret_chainNeg_err.txt";
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string("timeout 5 ") + FERRET_BINARY +
+      " run dependent_chain_throughput"
+      " --chain_length=-1 --reps=2 --warmup=1"
+      " --out=" + out.string() +
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  ASSERT_TRUE(std::filesystem::exists(out));
+  EXPECT_EQ(0u, std::filesystem::file_size(out));
+}
+
+TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
+  // spacing_bytes=-1 cast to size_t made emit_nops loop SIZE_MAX times.
+  // Now Params::get<size_t> rejects the negative value.
+  auto out = std::filesystem::temp_directory_path() / "ferret_spacingNeg.csv";
+  auto err = std::filesystem::temp_directory_path() / "ferret_spacingNeg_err.txt";
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string("timeout 5 ") + FERRET_BINARY +
+      " run direct_branch_footprint"
+      " --branches=1,2 --spacing_bytes=-1 --reps=2 --warmup=1"
+      " --out=" + out.string() +
+      " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  ASSERT_TRUE(std::filesystem::exists(out));
+  EXPECT_EQ(0u, std::filesystem::file_size(out));
+}
+
 TEST(Integration, ZeroChainLengthExitsTwoNoCrash) {
   // chain_length=0 yields sites_per_kernel=0, which would divide by
   // zero in CSV normalization. do_run must reject the param point

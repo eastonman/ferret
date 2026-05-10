@@ -1,7 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 
@@ -13,9 +15,23 @@ class Params {
 public:
   void set(std::string key, int64_t value);
 
+  // Reads the underlying int64_t value as type T. When T is an unsigned
+  // type, a negative underlying value would silently wrap to a huge
+  // size_t and cause downstream loops to hang or allocations to throw —
+  // we reject it pre-emptively with std::invalid_argument so the caller
+  // (typically `do_run`) translates it to a clean exit-2 config error
+  // instead.
   template <typename T>
   T get(const std::string& key) const {
-    return static_cast<T>(get_raw(key));
+    int64_t raw = get_raw(key);
+    if constexpr (std::is_unsigned_v<T>) {
+      if (raw < 0) {
+        throw std::invalid_argument(
+            "Params::get<unsigned>: negative value for '" + key + "': " +
+            std::to_string(raw));
+      }
+    }
+    return static_cast<T>(raw);
   }
 
   bool has(const std::string& key) const;
