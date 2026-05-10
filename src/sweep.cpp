@@ -14,11 +14,6 @@ std::vector<Params> expand(
     std::vector<int64_t> values =
         (it != overrides.end()) ? it->second : a.expand();
     if (values.empty()) {
-      // Indexing into an empty value list below would be UB. An empty
-      // axis is also semantically meaningless: a sweep with zero values
-      // on one axis would emit zero rows, which the caller wouldn't
-      // distinguish from "benchmark not run". Throw so do_run's existing
-      // try/catch translates this to a clean exit-2 config error.
       throw std::invalid_argument(
           "Axis '" + a.name() + "' has no values to sweep");
     }

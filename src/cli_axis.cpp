@@ -1,7 +1,6 @@
 #include "ferret/cli_axis.hpp"
 
 #include <charconv>
-#include <limits>
 #include <sstream>
 #include <stdexcept>
 
@@ -19,11 +18,6 @@ int64_t parse_int(const std::string& s) {
   return v;
 }
 
-// Validates a final concrete value against the axis kind. Log2 axes
-// require positive values everywhere — single value, comma list, or
-// range — because log2 of a non-positive number is meaningless and
-// downstream consumers (e.g., direct_branch_footprint allocating
-// vectors of size N+1) treat the value as a count.
 void validate_value_against_kind(int64_t v, const Axis& axis,
                                  const std::string& cli_value) {
   if (axis.kind() == Axis::Kind::Log2Range && v <= 0) {
@@ -49,23 +43,11 @@ std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value,
     if (hi < lo) {
       throw std::invalid_argument("range hi < lo: " + cli_value);
     }
-    std::vector<int64_t> out;
     if (axis.kind() == Axis::Kind::Log2Range) {
-      if (lo <= 0) {
-        throw std::invalid_argument(
-            "log2 range requires lo > 0: " + cli_value);
-      }
-      // Pre-multiply overflow check: detect doubling that would exceed
-      // INT64_MAX before doing the multiply (avoids signed overflow UB).
-      constexpr int64_t kHalfMax = std::numeric_limits<int64_t>::max() / 2;
-      for (int64_t v = lo; v <= hi; ) {
-        out.push_back(v);
-        if (v > kHalfMax) break;
-        v *= 2;
-      }
-    } else {
-      for (int64_t v = lo; v <= hi; ++v) out.push_back(v);
+      return expand_log2_range(lo, hi, cli_value);
     }
+    std::vector<int64_t> out;
+    for (int64_t v = lo; v <= hi; ++v) out.push_back(v);
     return out;
   }
 

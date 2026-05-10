@@ -54,22 +54,31 @@ std::vector<int64_t> Axis::expand() const {
     case Kind::Range:
       for (int64_t v = lo_; v <= hi_; ++v) out.push_back(v);
       return out;
-    case Kind::Log2Range: {
-      if (lo_ <= 0) {
-        throw std::invalid_argument(
-            "Axis '" + name_ + "': log2 range requires lo > 0");
-      }
-      // Pre-multiply overflow check (avoids signed overflow UB).
-      constexpr int64_t kHalfMax = std::numeric_limits<int64_t>::max() / 2;
-      for (int64_t v = lo_; v <= hi_; ) {
-        out.push_back(v);
-        if (v > kHalfMax) break;
-        v *= 2;
-      }
-      return out;
-    }
+    case Kind::Log2Range:
+      return expand_log2_range(lo_, hi_, "Axis '" + name_ + "'");
     case Kind::Values:
       return values_;
+  }
+  return out;
+}
+
+std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi,
+                                       std::string_view context) {
+  if (lo <= 0) {
+    std::string msg;
+    if (!context.empty()) {
+      msg.append(context).append(": ");
+    }
+    msg.append("log2 range requires lo > 0");
+    throw std::invalid_argument(msg);
+  }
+  std::vector<int64_t> out;
+  // Pre-multiply overflow guard (signed overflow is UB).
+  constexpr int64_t kHalfMax = std::numeric_limits<int64_t>::max() / 2;
+  for (int64_t v = lo; v <= hi; ) {
+    out.push_back(v);
+    if (v > kHalfMax) break;
+    v *= 2;
   }
   return out;
 }

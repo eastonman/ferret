@@ -24,8 +24,11 @@ extern "C" {
 
 namespace {
 
-// Throws std::invalid_argument for malformed input or non-positive values.
 double parse_freq(const std::string& s) {
+  auto fail = [&](const char* why) {
+    throw std::invalid_argument(std::string("--freq: ") + why + ": " + s);
+  };
+
   std::string num = s;
   double mult = 1.0;
   auto strip_suffix = [&](const std::string& suf, double m) {
@@ -40,26 +43,18 @@ double parse_freq(const std::string& s) {
   strip_suffix("GHz", 1e9) || strip_suffix("MHz", 1e6) ||
       strip_suffix("kHz", 1e3) || strip_suffix("Hz", 1.0);
 
-  if (num.empty()) {
-    throw std::invalid_argument("--freq: empty numeric component: " + s);
-  }
+  if (num.empty()) fail("empty numeric component");
   size_t consumed = 0;
   double val = 0.0;
   try {
     val = std::stod(num, &consumed);
   } catch (const std::exception&) {
-    throw std::invalid_argument("--freq: not a number: " + s);
+    fail("not a number");
   }
-  if (consumed != num.size()) {
-    throw std::invalid_argument("--freq: trailing junk after number: " + s);
-  }
+  if (consumed != num.size()) fail("trailing junk after number");
   double hz = val * mult;
-  if (!std::isfinite(hz)) {
-    throw std::invalid_argument("--freq: must be finite: " + s);
-  }
-  if (!(hz > 0.0)) {
-    throw std::invalid_argument("--freq: must be positive: " + s);
-  }
+  if (!std::isfinite(hz)) fail("must be finite");
+  if (!(hz > 0.0)) fail("must be positive");
   return hz;
 }
 
@@ -156,10 +151,8 @@ int do_run(const std::string& name,
   std::vector<std::string> axis_cols;
   for (const auto& a : axes) axis_cols.push_back(a.name());
 
-  // ticks_per_ns() is the divisor for every CSV row's per-site cost.
-  // Zero or non-finite calibration would propagate as inf/nan into the
-  // CSV output, breaking downstream tooling. Validate up-front so the
-  // user sees a clean exit-2 runtime error instead of garbage numbers.
+  // tpns is the divisor for every CSV row; non-finite or zero would leak
+  // inf/nan into output.
   double tpns = ferret::timing::ticks_per_ns();
   if (!std::isfinite(tpns) || !(tpns > 0.0)) {
     std::cerr << "ferret: ticks_per_ns calibration returned non-finite "
@@ -167,11 +160,9 @@ int do_run(const std::string& name,
     return 2;
   }
 
-  // Buffer-then-flush: spec §7 class-1 says benchmark-parameter errors
-  // must produce no partial output. Collect every row's measurement in
-  // memory; if any row throws a benchmark exception, return exit 2
-  // with the output file/stdout left empty. Only after the full sweep
-  // completes without exceptions do we emit the header and rows.
+  // Spec §7 class-1: benchmark-parameter errors must produce no partial
+  // output. Collect every row's measurement in memory and emit only on
+  // full success.
   std::vector<std::pair<ferret::Params, ferret::MeasurementRow>> buffered;
   buffered.reserve(rows.size());
 
@@ -179,12 +170,6 @@ int do_run(const std::string& name,
     ferret::MeasurementRow m;
     JittedKernel kern;
     try {
-      // Pre-flight: any param point that yields zero work would divide
-      // by zero in CSV normalization. The Params::get<size_t> calls
-      // here may also throw std::invalid_argument when an axis override
-      // smuggled in a negative value (e.g., --chain_length=-1) — that
-      // throw is funneled through the same catch block so the user
-      // sees an exit-2 config error instead of a hang or abort.
       size_t pre_iters = bench->iterations(p);
       size_t pre_sites = bench->sites_per_kernel(p);
       if (pre_iters == 0 || pre_sites == 0) {
@@ -206,12 +191,6 @@ int do_run(const std::string& name,
         jit_free(kern);
       }
     } catch (const std::exception& e) {
-      // Out-of-range/extreme benchmark parameters can blow up vector
-      // allocations inside emit_kernel, or smuggle negative values
-      // through Params::get<size_t>. Translate to a config error so
-      // the process exits cleanly instead of aborting/hanging. The
-      // file/stdout remains empty because no buffered row has been
-      // flushed yet.
       jit_free(kern);
       std::cerr << "ferret: benchmark error on params: " << e.what() << "\n";
       return 2;

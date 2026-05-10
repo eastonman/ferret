@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ferret {
@@ -29,5 +30,13 @@ private:
 };
 
 using SweepAxes = std::vector<Axis>;
+
+// Expands a log2 range [lo, hi] into {lo, lo*2, lo*4, ...} up to the
+// largest power-of-two not exceeding hi. Throws std::invalid_argument
+// when lo <= 0. Stops when the next doubling would overflow int64_t.
+// `context` is prepended to the error message (e.g., axis name or CLI
+// fragment) so the user sees what value triggered the failure.
+std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi,
+                                       std::string_view context = {});
 
 }  // namespace ferret
