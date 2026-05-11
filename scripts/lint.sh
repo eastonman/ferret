@@ -34,4 +34,19 @@ if [ ! -f build/compile_commands.json ]; then
 fi
 
 echo "==> clang-tidy"
-clang-tidy --quiet -p build "${CXX_LINT_FILES[@]}"
+# clang-tidy from nixpkgs is unwrapped, so the C++ stdlib search paths
+# that the clang++ wrapper injects (NIX_CFLAGS_COMPILE plus an implicit
+# -cxx-isystem) must be passed through explicitly. Empty on non-Nix → no-op.
+TIDY_EXTRA_ARGS=()
+if [ -n "${NIX_CFLAGS_COMPILE:-}" ]; then
+  for flag in $NIX_CFLAGS_COMPILE; do
+    TIDY_EXTRA_ARGS+=(--extra-arg="$flag")
+  done
+  for flag in $NIX_CFLAGS_COMPILE; do
+    if [[ "$flag" == *libcxx*/include ]]; then
+      TIDY_EXTRA_ARGS+=(--extra-arg="-isystem$flag/c++/v1")
+      break
+    fi
+  done
+fi
+clang-tidy --quiet -p build "${TIDY_EXTRA_ARGS[@]}" "${CXX_LINT_FILES[@]}"
