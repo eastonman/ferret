@@ -67,6 +67,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+*.csv
+*.png
 
 # AI Agent and Orchestration
 .humanize/
