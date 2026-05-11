@@ -9,3 +9,10 @@ target_link_libraries(test_deps_link PRIVATE
   sljit::sljit
 )
 gtest_discover_tests(test_deps_link)
+
+add_executable(test_params_axis test_params_axis.cpp)
+target_link_libraries(test_params_axis PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_params_axis)
