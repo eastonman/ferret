@@ -1,0 +1,9 @@
+---
+BasedOnStyle: Google
+ColumnLimit: 120
+IndentWidth: 2
+PointerAlignment: Left
+DerivePointerAlignment: false
+IncludeBlocks: Preserve
+SortIncludes: CaseSensitive
+---
