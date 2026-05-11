@@ -48,3 +48,23 @@ jobs:
         run: |
           nix develop --command bash -c \
             "cmake -S . -B build -GNinja && cmake --build build && ctest --test-dir build --output-on-failure"
+
+  format-lint:
+    name: format-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install apt deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format clang-tidy ninja-build
+
+      - name: install ruff
+        run: pip install ruff==0.15.12
+
+      - name: configure (for compile_commands.json)
+        run: cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: lint
+        run: ./scripts/lint.sh
