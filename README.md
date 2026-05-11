@@ -85,6 +85,29 @@ ferret run <name> [options] [--<axis>=value-or-range]
   --<axis>=lo..hi   range using the axis's declared step policy
 ```
 
+## Formatting and linting
+
+Formatters and linters run in CI and must pass before merging.
+
+- C++: `clang-format` (style in `.clang-format`) and `clang-tidy` (checks
+  in `.clang-tidy`).
+- Python: `ruff format` and `ruff check` (config in `pyproject.toml`).
+
+Apply formatters locally:
+
+```sh
+./scripts/format.sh
+```
+
+Verify the way CI does:
+
+```sh
+cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+./scripts/lint.sh
+```
+
+All tools are provided by `nix develop`.
+
 ## Discipline (a.k.a. caveats)
 
 ferret does what user-space can do to make timing reliable: pins a
