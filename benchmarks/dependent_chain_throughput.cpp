@@ -22,16 +22,16 @@ namespace ferret {
 struct DependentChainThroughput : Benchmark {
   static constexpr int UNROLL = 1024;
 
-  std::string name() const override { return "dependent_chain_throughput"; }
+  [[nodiscard]] std::string name() const override { return "dependent_chain_throughput"; }
 
-  SweepAxes axes() const override { return {Axis::values("chain_length", {100'000'000})}; }
+  [[nodiscard]] SweepAxes axes() const override { return {Axis::values("chain_length", {100'000'000})}; }
 
-  size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("chain_length"); }
+  [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("chain_length"); }
 
-  size_t iterations(const Params&) const override { return 1; }
+  [[nodiscard]] size_t iterations(const Params& /*p*/) const override { return 1; }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
-    size_t total = p.get<size_t>("chain_length");
+    auto total = p.get<size_t>("chain_length");
     size_t full_blocks = total / UNROLL;
     size_t remainder = total % UNROLL;
 

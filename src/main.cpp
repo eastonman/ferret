@@ -30,7 +30,7 @@ double parse_freq(const std::string& s) {
   std::string num = s;
   double mult = 1.0;
   auto strip_suffix = [&](const std::string& suf, double m) {
-    if (num.size() >= suf.size() && num.compare(num.size() - suf.size(), suf.size(), suf) == 0) {
+    if (num.size() >= suf.size() && num.ends_with(suf)) {
       num.resize(num.size() - suf.size());
       mult = m;
       return true;
@@ -39,7 +39,9 @@ double parse_freq(const std::string& s) {
   };
   strip_suffix("GHz", 1e9) || strip_suffix("MHz", 1e6) || strip_suffix("kHz", 1e3) || strip_suffix("Hz", 1.0);
 
-  if (num.empty()) fail("empty numeric component");
+  if (num.empty()) {
+    fail("empty numeric component");
+  }
   size_t consumed = 0;
   double val = 0.0;
   try {
@@ -47,10 +49,16 @@ double parse_freq(const std::string& s) {
   } catch (const std::exception&) {
     fail("not a number");
   }
-  if (consumed != num.size()) fail("trailing junk after number");
+  if (consumed != num.size()) {
+    fail("trailing junk after number");
+  }
   double hz = val * mult;
-  if (!std::isfinite(hz)) fail("must be finite");
-  if (!(hz > 0.0)) fail("must be positive");
+  if (!std::isfinite(hz)) {
+    fail("must be finite");
+  }
+  if (!(hz > 0.0)) {
+    fail("must be positive");
+  }
   return hz;
 }
 
@@ -60,7 +68,9 @@ struct JittedKernel {
 
 JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
   sljit_compiler* c = sljit_create_compiler(nullptr);
-  if (!c) return {};
+  if (c == nullptr) {
+    return {};
+  }
   b.emit_kernel(c, p);
   if (sljit_get_compiler_error(c) != SLJIT_SUCCESS) {
     sljit_free_compiler(c);
@@ -72,7 +82,9 @@ JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
 }
 
 void jit_free(JittedKernel& k) {
-  if (k.code) sljit_free_code(k.code, nullptr);
+  if (k.code != nullptr) {
+    sljit_free_code(k.code, nullptr);
+  }
   k.code = nullptr;
 }
 
@@ -83,6 +95,7 @@ int do_list() {
   return 0;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int do_run(const std::string& name, const std::map<std::string, std::string>& cli_axis_overrides,
            const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
   auto bench = ferret::BenchmarkRegistry::create(name);
@@ -95,9 +108,12 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   ferret::SweepAxes axes = bench->axes();
   for (const auto& [k, v] : cli_axis_overrides) {
     const ferret::Axis* matching = nullptr;
-    for (const auto& a : axes)
-      if (a.name() == k) matching = &a;
-    if (!matching) {
+    for (const auto& a : axes) {
+      if (a.name() == k) {
+        matching = &a;
+      }
+    }
+    if (matching == nullptr) {
       std::cerr << "ferret: unknown axis --" << k << " for benchmark " << name << "\n";
       return 2;
     }
@@ -118,10 +134,16 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   }
 
   if (core >= 0) {
-    if (!ferret::pinning::pin_to_core(core)) std::cerr << "ferret: warning: pin_to_core(" << core << ") failed\n";
+    if (!ferret::pinning::pin_to_core(core)) {
+      std::cerr << "ferret: warning: pin_to_core(" << core << ") failed\n";
+    }
   }
-  if (!ferret::pinning::boost_priority()) std::cerr << "ferret: warning: boost_priority failed\n";
-  if (!ferret::pinning::lock_memory()) std::cerr << "ferret: warning: mlockall failed\n";
+  if (!ferret::pinning::boost_priority()) {
+    std::cerr << "ferret: warning: boost_priority failed\n";
+  }
+  if (!ferret::pinning::lock_memory()) {
+    std::cerr << "ferret: warning: mlockall failed\n";
+  }
 
   std::ofstream ofs;
   std::ostream* out_stream = &std::cout;
@@ -135,7 +157,9 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   }
 
   std::vector<std::string> axis_cols;
-  for (const auto& a : axes) axis_cols.push_back(a.name());
+  for (const auto& a : axes) {
+    axis_cols.push_back(a.name());
+  }
 
   // tpns is the divisor for every CSV row; non-finite or zero would leak
   // inf/nan into output.
@@ -166,13 +190,13 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
 
       kern = jit_compile(*bench, p);
-      if (!kern.code) {
+      if (kern.code == nullptr) {
         m.jit_failed = true;
         m.iters = pre_iters;
         m.sites = pre_sites;
         std::cerr << "ferret: sljit_error on params; emitting empty row\n";
       } else {
-        auto fn = reinterpret_cast<void (*)(void)>(kern.code);
+        auto fn = reinterpret_cast<void (*)()>(kern.code);
         m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
         jit_free(kern);
       }
@@ -196,6 +220,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
 
 }  // namespace
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, char** argv) {
   CLI::App app{"ferret — frontend reverse-engineering toolkit"};
   app.require_subcommand(1);
@@ -225,7 +250,9 @@ int main(int argc, char** argv) {
 
   CLI11_PARSE(app, argc, argv);
 
-  if (*list_cmd) return do_list();
+  if (*list_cmd) {
+    return do_list();
+  }
 
   if (*run_cmd) {
     if (K < 1) {

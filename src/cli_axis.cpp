@@ -9,7 +9,9 @@ namespace ferret {
 namespace {
 
 int64_t parse_int(const std::string& s) {
-  if (s.empty()) throw std::invalid_argument("empty number");
+  if (s.empty()) {
+    throw std::invalid_argument("empty number");
+  }
   int64_t v = 0;
   auto [p, ec] = std::from_chars(s.data(), s.data() + s.size(), v);
   if (ec != std::errc{} || p != s.data() + s.size()) {
@@ -43,7 +45,9 @@ std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value, const Ax
       return expand_log2_range(lo, hi, cli_value);
     }
     std::vector<int64_t> out;
-    for (int64_t v = lo; v <= hi; ++v) out.push_back(v);
+    for (int64_t v = lo; v <= hi; ++v) {
+      out.push_back(v);
+    }
     return out;
   }
 

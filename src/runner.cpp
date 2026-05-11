@@ -8,6 +8,7 @@
 
 namespace ferret::runner {
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmup) {
   if (K <= 0) {
     throw std::invalid_argument("runner::measure: K (reps) must be >= 1");
@@ -20,7 +21,9 @@ MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmu
   row.sites = sites;
   row.reps = static_cast<size_t>(K);
 
-  for (int i = 0; i < warmup; ++i) fn();
+  for (int i = 0; i < warmup; ++i) {
+    fn();
+  }
 
   std::vector<uint64_t> samples;
   samples.reserve(K);
@@ -31,7 +34,7 @@ MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmu
     samples.push_back(t1 - t0);
   }
 
-  std::sort(samples.begin(), samples.end());
+  std::ranges::sort(samples);
   row.ticks_min = samples.front();
   row.ticks_median = samples[samples.size() / 2];
   return row;

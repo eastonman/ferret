@@ -7,7 +7,7 @@
 
 namespace ferret {
 
-void Params::set(std::string key, int64_t value) {
+void Params::set(const std::string& key, int64_t value) {
   auto [it, inserted] = values_.emplace(key, value);
   if (inserted) {
     order_.push_back(it->first);
@@ -16,7 +16,7 @@ void Params::set(std::string key, int64_t value) {
   }
 }
 
-bool Params::has(const std::string& key) const { return values_.find(key) != values_.end(); }
+bool Params::has(const std::string& key) const { return values_.contains(key); }
 
 int64_t Params::get_raw(const std::string& key) const {
   auto it = values_.find(key);
@@ -26,6 +26,7 @@ int64_t Params::get_raw(const std::string& key) const {
   return it->second;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 Axis Axis::range(std::string name, int64_t lo, int64_t hi) {
   Axis a(std::move(name), Kind::Range);
   a.lo_ = lo;
@@ -33,6 +34,7 @@ Axis Axis::range(std::string name, int64_t lo, int64_t hi) {
   return a;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 Axis Axis::log2_range(std::string name, int64_t lo, int64_t hi) {
   Axis a(std::move(name), Kind::Log2Range);
   a.lo_ = lo;
@@ -50,7 +52,9 @@ std::vector<int64_t> Axis::expand() const {
   std::vector<int64_t> out;
   switch (kind_) {
     case Kind::Range:
-      for (int64_t v = lo_; v <= hi_; ++v) out.push_back(v);
+      for (int64_t v = lo_; v <= hi_; ++v) {
+        out.push_back(v);
+      }
       return out;
     case Kind::Log2Range:
       return expand_log2_range(lo_, hi_, "Axis '" + name_ + "'");
@@ -60,6 +64,7 @@ std::vector<int64_t> Axis::expand() const {
   return out;
 }
 
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi, std::string_view context) {
   if (lo <= 0) {
     std::string msg;
@@ -74,7 +79,9 @@ std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi, std::string_view 
   constexpr int64_t kHalfMax = std::numeric_limits<int64_t>::max() / 2;
   for (int64_t v = lo; v <= hi;) {
     out.push_back(v);
-    if (v > kHalfMax) break;
+    if (v > kHalfMax) {
+      break;
+    }
     v *= 2;
   }
   return out;

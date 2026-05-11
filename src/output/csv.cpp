@@ -10,10 +10,14 @@ CsvWriter::CsvWriter(std::ostream& os, std::string benchmark_name, std::vector<s
 
 void CsvWriter::write_header() {
   os_ << "benchmark";
-  for (const auto& a : axis_columns_) os_ << "," << a;
+  for (const auto& a : axis_columns_) {
+    os_ << "," << a;
+  }
   os_ << ",ticks_min,ticks_median,iters,sites_per_iter,reps"
       << ",ns_per_site_min,ns_per_site_median";
-  if (freq_hz_) os_ << ",cycles_per_site_min,cycles_per_site_median,freq_hz";
+  if (freq_hz_) {
+    os_ << ",cycles_per_site_min,cycles_per_site_median,freq_hz";
+  }
   os_ << "\n";
 }
 
@@ -21,13 +25,17 @@ void CsvWriter::write_row(const Params& p, const MeasurementRow& m, double ticks
   os_ << benchmark_name_;
   for (const auto& a : axis_columns_) {
     os_ << ",";
-    if (p.has(a)) os_ << p.get<int64_t>(a);
+    if (p.has(a)) {
+      os_ << p.get<int64_t>(a);
+    }
   }
 
   if (m.jit_failed) {
     // Empty cells: ticks_min,ticks_median,iters,sites_per_iter,reps,ns_min,ns_med
     os_ << ",,,,,,,";
-    if (freq_hz_) os_ << ",,,";
+    if (freq_hz_) {
+      os_ << ",,,";
+    }
     os_ << "\n";
     return;
   }

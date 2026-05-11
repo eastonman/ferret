@@ -13,7 +13,7 @@ namespace ferret {
 // because every benchmark axis is integral.
 class Params {
  public:
-  void set(std::string key, int64_t value);
+  void set(const std::string& key, int64_t value);
 
   // Negative int64 would silently wrap when T is unsigned; reject explicitly.
   template <typename T>

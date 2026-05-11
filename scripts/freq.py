@@ -13,7 +13,7 @@ import sys
 
 
 def main(argv):
-    if len(argv) != 2:
+    if len(argv) != 2:  # noqa: PLR2004
         print("usage: freq.py FILE.csv", file=sys.stderr)
         return 2
     with open(argv[1], newline="") as f:

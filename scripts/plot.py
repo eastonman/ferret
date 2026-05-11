@@ -78,7 +78,7 @@ def main():
     if series_cols:
         for keys, sub in df.groupby(series_cols):
             label_keys = keys if isinstance(keys, tuple) else (keys,)
-            label = ", ".join(f"{c}={v}" for c, v in zip(series_cols, label_keys))
+            label = ", ".join(f"{c}={v}" for c, v in zip(series_cols, label_keys, strict=True))
             ax.plot(sub[xcol], sub[ycol], marker="o", markersize=3, label=label)
         ax.legend()
     else:

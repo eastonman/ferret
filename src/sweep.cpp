@@ -34,9 +34,13 @@ std::vector<Params> expand(const SweepAxes& axes, const std::map<std::string, st
     while (i > 0) {
       --i;
       ++indices[i];
-      if (indices[i] < resolved[i].second.size()) break;
+      if (indices[i] < resolved[i].second.size()) {
+        break;
+      }
       indices[i] = 0;
-      if (i == 0) return rows;
+      if (i == 0) {
+        return rows;
+      }
     }
   }
 }

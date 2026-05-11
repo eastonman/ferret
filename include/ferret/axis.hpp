@@ -11,7 +11,9 @@ class Axis {
  public:
   enum class Kind { Range, Log2Range, Values };
 
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   static Axis range(std::string name, int64_t lo, int64_t hi);
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   static Axis log2_range(std::string name, int64_t lo, int64_t hi);
   static Axis values(std::string name, std::vector<int64_t> vs);
 
@@ -36,6 +38,7 @@ using SweepAxes = std::vector<Axis>;
 // when lo <= 0. Stops when the next doubling would overflow int64_t.
 // `context` is prepended to the error message (e.g., axis name or CLI
 // fragment) so the user sees what value triggered the failure.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi, std::string_view context = {});
 
 }  // namespace ferret

@@ -19,24 +19,24 @@ namespace ferret {
 // before/after sljit_emit_jump to know how many bytes the jump consumed,
 // then emit `spacing - jump_size` NOPs.
 struct DirectBranchFootprint : Benchmark {
-  std::string name() const override { return "direct_branch_footprint"; }
+  [[nodiscard]] std::string name() const override { return "direct_branch_footprint"; }
 
-  SweepAxes axes() const override {
+  [[nodiscard]] SweepAxes axes() const override {
     return {
         Axis::log2_range("branches", 1, 1 << 15),
         Axis::values("spacing_bytes", {16, 32, 64, 128}),
     };
   }
 
-  size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
+  [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
-  size_t iterations(const Params& p) const override {
+  [[nodiscard]] size_t iterations(const Params& p) const override {
     return std::max<size_t>(1, 10'000'000 / p.get<size_t>("branches"));
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
-    size_t branches = p.get<size_t>("branches");
-    size_t spacing = p.get<size_t>("spacing_bytes");
+    auto branches = p.get<size_t>("branches");
+    auto spacing = p.get<size_t>("spacing_bytes");
     size_t iters = iterations(p);
 
     sljit_emit_enter(c, 0, SLJIT_ARGS0V(), 1, 1, 0);
