@@ -8,7 +8,7 @@
 namespace ferret {
 
 class Axis {
-public:
+ public:
   enum class Kind { Range, Log2Range, Values };
 
   static Axis range(std::string name, int64_t lo, int64_t hi);
@@ -19,7 +19,7 @@ public:
   Kind kind() const { return kind_; }
   std::vector<int64_t> expand() const;
 
-private:
+ private:
   Axis(std::string name, Kind kind) : name_(std::move(name)), kind_(kind) {}
 
   std::string name_;
@@ -36,7 +36,6 @@ using SweepAxes = std::vector<Axis>;
 // when lo <= 0. Stops when the next doubling would overflow int64_t.
 // `context` is prepended to the error message (e.g., axis name or CLI
 // fragment) so the user sees what value triggered the failure.
-std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi,
-                                       std::string_view context = {});
+std::vector<int64_t> expand_log2_range(int64_t lo, int64_t hi, std::string_view context = {});
 
 }  // namespace ferret

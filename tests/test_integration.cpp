@@ -25,9 +25,7 @@ std::string slurp(const std::string& path) {
   return ss.str();
 }
 
-int run(const std::string& cmd) {
-  return std::system(cmd.c_str());
-}
+int run(const std::string& cmd) { return std::system(cmd.c_str()); }
 
 }  // namespace
 
@@ -35,10 +33,11 @@ TEST(Integration, DirectBranchFootprintProducesNonEmptyRows) {
   auto out = std::filesystem::temp_directory_path() / "ferret_btb.csv";
   std::filesystem::remove(out);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2,4,8 --spacing_bytes=64"
-      " --reps=3 --warmup=1"
-      " --out=" + out.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2,4,8 --spacing_bytes=64"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
   ASSERT_EQ(0, run(cmd));
 
   std::string contents = slurp(out.string());
@@ -51,9 +50,10 @@ TEST(Integration, DependentChainThroughputProducesOneRow) {
   auto out = std::filesystem::temp_directory_path() / "ferret_freq.csv";
   std::filesystem::remove(out);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run dependent_chain_throughput"
-      " --chain_length=1000000 --reps=3 --warmup=1"
-      " --out=" + out.string();
+                    " run dependent_chain_throughput"
+                    " --chain_length=1000000 --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
   ASSERT_EQ(0, run(cmd));
 
   std::string contents = slurp(out.string());
@@ -78,9 +78,10 @@ TEST(Integration, InvalidFreqExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_freq_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
-      " --freq=bogus 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " --freq=bogus 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2 (config error), got " << rc;
   std::string err_contents = slurp(err.string());
@@ -92,9 +93,10 @@ TEST(Integration, NegativeRepsExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_reps_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2 --spacing_bytes=64 --reps=0 --warmup=1"
-      " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=64 --reps=0 --warmup=1"
+                    " 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
 }
@@ -103,9 +105,10 @@ TEST(Integration, ZeroBranchesExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_branches0_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=0 --spacing_bytes=64 --reps=2 --warmup=1"
-      " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=0 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -116,9 +119,10 @@ TEST(Integration, NegativeBranchesExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_branchesNeg_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=-1 --spacing_bytes=64 --reps=2 --warmup=1"
-      " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=-1 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -135,16 +139,16 @@ TEST(Integration, HugeBranchesExitsTwoNoCrash) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
-      " > " + out.string() + " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " > " +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   std::string out_contents = slurp(out.string());
-  EXPECT_TRUE(out_contents.empty())
-      << "expected stdout to be empty (no partial CSV), got: " << out_contents;
+  EXPECT_TRUE(out_contents.empty()) << "expected stdout to be empty (no partial CSV), got: " << out_contents;
 }
 
 TEST(Integration, MixedSweepHugeRowExitsTwoNoPartialOutput) {
@@ -156,17 +160,17 @@ TEST(Integration, MixedSweepHugeRowExitsTwoNoPartialOutput) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
-      " > " + out.string() + " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " > " +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   std::string out_contents = slurp(out.string());
-  EXPECT_TRUE(out_contents.empty())
-      << "expected stdout empty (no partial CSV from earlier successful row), got: "
-      << out_contents;
+  EXPECT_TRUE(out_contents.empty()) << "expected stdout empty (no partial CSV from earlier successful row), got: "
+                                    << out_contents;
 }
 
 TEST(Integration, MixedSweepHugeRowOutFileStaysEmpty) {
@@ -177,24 +181,24 @@ TEST(Integration, MixedSweepHugeRowOutFileStaysEmpty) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
-      " --out=" + out.string() +
-      " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   ASSERT_TRUE(std::filesystem::exists(out));
-  EXPECT_EQ(0u, std::filesystem::file_size(out))
-      << "expected output file empty (no partial CSV)";
+  EXPECT_EQ(0u, std::filesystem::file_size(out)) << "expected output file empty (no partial CSV)";
 }
 
 TEST(Integration, FreqInfExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_freqInf_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
-      " --freq=inf 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " --freq=inf 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -205,9 +209,10 @@ TEST(Integration, FreqNanExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_freqNan_err.txt";
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
-      " --freq=nan 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " --freq=nan 2> " +
+                    err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -227,10 +232,10 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run dependent_chain_throughput"
-      " --chain_length=-1 --reps=2 --warmup=1"
-      " --out=" + out.string() +
-      " 2> " + err.string();
+                    " run dependent_chain_throughput"
+                    " --chain_length=-1 --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -248,10 +253,10 @@ TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run direct_branch_footprint"
-      " --branches=1,2 --spacing_bytes=-1 --reps=2 --warmup=1"
-      " --out=" + out.string() +
-      " 2> " + err.string();
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=-1 --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
@@ -269,17 +274,16 @@ TEST(Integration, ZeroChainLengthExitsTwoNoCrash) {
   std::filesystem::remove(out);
   std::filesystem::remove(err);
   std::string cmd = std::string(FERRET_BINARY) +
-      " run dependent_chain_throughput"
-      " --chain_length=0 --reps=3 --warmup=1"
-      " --out=" + out.string() +
-      " 2> " + err.string();
+                    " run dependent_chain_throughput"
+                    " --chain_length=0 --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   ASSERT_TRUE(std::filesystem::exists(out));
-  EXPECT_EQ(0u, std::filesystem::file_size(out))
-      << "expected output file empty (zero-work param rejected)";
+  EXPECT_EQ(0u, std::filesystem::file_size(out)) << "expected output file empty (zero-work param rejected)";
 }
 
 // Sanity: a non-1024-multiple chain_length still produces a measurement
@@ -292,13 +296,15 @@ TEST(Integration, FreqProbeExactOpCountSanity) {
   std::filesystem::remove(out_a);
   std::filesystem::remove(out_b);
   std::string cmd_a = std::string(FERRET_BINARY) +
-      " run dependent_chain_throughput"
-      " --chain_length=1024 --reps=5 --warmup=2"
-      " --out=" + out_a.string();
+                      " run dependent_chain_throughput"
+                      " --chain_length=1024 --reps=5 --warmup=2"
+                      " --out=" +
+                      out_a.string();
   std::string cmd_b = std::string(FERRET_BINARY) +
-      " run dependent_chain_throughput"
-      " --chain_length=1000 --reps=5 --warmup=2"
-      " --out=" + out_b.string();
+                      " run dependent_chain_throughput"
+                      " --chain_length=1000 --reps=5 --warmup=2"
+                      " --out=" +
+                      out_b.string();
   ASSERT_EQ(0, run(cmd_a));
   ASSERT_EQ(0, run(cmd_b));
 

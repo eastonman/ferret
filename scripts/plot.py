@@ -11,7 +11,6 @@ columns become series (one curve per unique value).
 """
 
 import argparse
-import sys
 
 import matplotlib
 
@@ -58,9 +57,7 @@ def auto_x_column(df, metric_col):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("csv")
-    ap.add_argument(
-        "--out", default=None, help="output image path; default shows interactively"
-    )
+    ap.add_argument("--out", default=None, help="output image path; default shows interactively")
     ap.add_argument("--x", default=None, help="X-axis column name")
     args = ap.parse_args()
 
@@ -75,9 +72,7 @@ def main():
 
     xcol = args.x or auto_x_column(df, ycol)
 
-    series_cols = [
-        c for c in df.columns if c not in METADATA_COLS and c not in {xcol, ycol}
-    ]
+    series_cols = [c for c in df.columns if c not in METADATA_COLS and c not in {xcol, ycol}]
 
     fig, ax = plt.subplots(figsize=(8, 5))
     if series_cols:

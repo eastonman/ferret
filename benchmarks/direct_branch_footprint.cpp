@@ -23,14 +23,12 @@ struct DirectBranchFootprint : Benchmark {
 
   SweepAxes axes() const override {
     return {
-      Axis::log2_range("branches", 1, 1 << 15),
-      Axis::values("spacing_bytes", {16, 32, 64, 128}),
+        Axis::log2_range("branches", 1, 1 << 15),
+        Axis::values("spacing_bytes", {16, 32, 64, 128}),
     };
   }
 
-  size_t sites_per_kernel(const Params& p) const override {
-    return p.get<size_t>("branches");
-  }
+  size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
   size_t iterations(const Params& p) const override {
     return std::max<size_t>(1, 10'000'000 / p.get<size_t>("branches"));
@@ -42,8 +40,7 @@ struct DirectBranchFootprint : Benchmark {
     size_t iters = iterations(p);
 
     sljit_emit_enter(c, 0, SLJIT_ARGS0V(), 1, 1, 0);
-    sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0,
-                   SLJIT_IMM, static_cast<sljit_sw>(iters));
+    sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
 
     sljit_label* loop_top = sljit_emit_label(c);
 
@@ -71,10 +68,7 @@ struct DirectBranchFootprint : Benchmark {
       sljit_set_label(jumps[i], labels[i + 1]);
     }
 
-    sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z,
-                   SLJIT_R0, 0,
-                   SLJIT_R0, 0,
-                   SLJIT_IMM, 1);
+    sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
     sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
     sljit_set_label(back, loop_top);
 

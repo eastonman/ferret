@@ -13,8 +13,6 @@ namespace ferret::sweep {
 // an entry whose key matches an axis name, that override replaces the
 // axis's default expansion for this call. Overrides for unknown axes are
 // silently ignored. The first axis varies slowest in the output order.
-std::vector<Params> expand(
-    const SweepAxes& axes,
-    const std::map<std::string, std::vector<int64_t>>& overrides);
+std::vector<Params> expand(const SweepAxes& axes, const std::map<std::string, std::vector<int64_t>>& overrides);
 
 }  // namespace ferret::sweep

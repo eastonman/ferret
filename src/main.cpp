@@ -25,23 +25,19 @@ extern "C" {
 namespace {
 
 double parse_freq(const std::string& s) {
-  auto fail = [&](const char* why) {
-    throw std::invalid_argument(std::string("--freq: ") + why + ": " + s);
-  };
+  auto fail = [&](const char* why) { throw std::invalid_argument(std::string("--freq: ") + why + ": " + s); };
 
   std::string num = s;
   double mult = 1.0;
   auto strip_suffix = [&](const std::string& suf, double m) {
-    if (num.size() >= suf.size() &&
-        num.compare(num.size() - suf.size(), suf.size(), suf) == 0) {
+    if (num.size() >= suf.size() && num.compare(num.size() - suf.size(), suf.size(), suf) == 0) {
       num.resize(num.size() - suf.size());
       mult = m;
       return true;
     }
     return false;
   };
-  strip_suffix("GHz", 1e9) || strip_suffix("MHz", 1e6) ||
-      strip_suffix("kHz", 1e3) || strip_suffix("Hz", 1.0);
+  strip_suffix("GHz", 1e9) || strip_suffix("MHz", 1e6) || strip_suffix("kHz", 1e3) || strip_suffix("Hz", 1.0);
 
   if (num.empty()) fail("empty numeric component");
   size_t consumed = 0;
@@ -72,7 +68,7 @@ JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
   }
   void* code = sljit_generate_code(c, 0, nullptr);
   sljit_free_compiler(c);
-  return { code };
+  return {code};
 }
 
 void jit_free(JittedKernel& k) {
@@ -87,17 +83,11 @@ int do_list() {
   return 0;
 }
 
-int do_run(const std::string& name,
-           const std::map<std::string, std::string>& cli_axis_overrides,
-           const std::string& out_path,
-           int core,
-           std::optional<double> freq_hz,
-           int K,
-           int warmup) {
+int do_run(const std::string& name, const std::map<std::string, std::string>& cli_axis_overrides,
+           const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
   auto bench = ferret::BenchmarkRegistry::create(name);
   if (!bench) {
-    std::cerr << "ferret: unknown benchmark '" << name
-              << "'. Try `ferret list`.\n";
+    std::cerr << "ferret: unknown benchmark '" << name << "'. Try `ferret list`.\n";
     return 2;
   }
 
@@ -105,17 +95,16 @@ int do_run(const std::string& name,
   ferret::SweepAxes axes = bench->axes();
   for (const auto& [k, v] : cli_axis_overrides) {
     const ferret::Axis* matching = nullptr;
-    for (const auto& a : axes) if (a.name() == k) matching = &a;
+    for (const auto& a : axes)
+      if (a.name() == k) matching = &a;
     if (!matching) {
-      std::cerr << "ferret: unknown axis --" << k << " for benchmark "
-                << name << "\n";
+      std::cerr << "ferret: unknown axis --" << k << " for benchmark " << name << "\n";
       return 2;
     }
     try {
       overrides[k] = ferret::parse_cli_axis_value(v, *matching);
     } catch (const std::exception& e) {
-      std::cerr << "ferret: invalid value for --" << k << ": "
-                << e.what() << "\n";
+      std::cerr << "ferret: invalid value for --" << k << ": " << e.what() << "\n";
       return 2;
     }
   }
@@ -129,13 +118,10 @@ int do_run(const std::string& name,
   }
 
   if (core >= 0) {
-    if (!ferret::pinning::pin_to_core(core))
-      std::cerr << "ferret: warning: pin_to_core(" << core << ") failed\n";
+    if (!ferret::pinning::pin_to_core(core)) std::cerr << "ferret: warning: pin_to_core(" << core << ") failed\n";
   }
-  if (!ferret::pinning::boost_priority())
-    std::cerr << "ferret: warning: boost_priority failed\n";
-  if (!ferret::pinning::lock_memory())
-    std::cerr << "ferret: warning: mlockall failed\n";
+  if (!ferret::pinning::boost_priority()) std::cerr << "ferret: warning: boost_priority failed\n";
+  if (!ferret::pinning::lock_memory()) std::cerr << "ferret: warning: mlockall failed\n";
 
   std::ofstream ofs;
   std::ostream* out_stream = &std::cout;
@@ -156,7 +142,8 @@ int do_run(const std::string& name,
   double tpns = ferret::timing::ticks_per_ns();
   if (!std::isfinite(tpns) || !(tpns > 0.0)) {
     std::cerr << "ferret: ticks_per_ns calibration returned non-finite "
-                 "or non-positive value: " << tpns << "\n";
+                 "or non-positive value: "
+              << tpns << "\n";
     return 2;
   }
 
@@ -174,8 +161,7 @@ int do_run(const std::string& name,
       size_t pre_sites = bench->sites_per_kernel(p);
       if (pre_iters == 0 || pre_sites == 0) {
         std::cerr << "ferret: invalid params: yields zero work"
-                  << " (iterations=" << pre_iters
-                  << ", sites_per_kernel=" << pre_sites << ")\n";
+                  << " (iterations=" << pre_iters << ", sites_per_kernel=" << pre_sites << ")\n";
         return 2;
       }
 
@@ -227,16 +213,13 @@ int main(int argc, char** argv) {
   run_cmd->add_option("--core", core, "core to pin to (default: no pin)");
 
   std::string freq_str;
-  run_cmd->add_option("--freq", freq_str,
-      "core frequency, e.g. 4.521GHz; enables cycles_per_site columns");
+  run_cmd->add_option("--freq", freq_str, "core frequency, e.g. 4.521GHz; enables cycles_per_site columns");
 
   int K = 7;
-  run_cmd->add_option("--reps", K,
-      "number of timed repetitions per param point (default 7)");
+  run_cmd->add_option("--reps", K, "number of timed repetitions per param point (default 7)");
 
   int warmup = 1;
-  run_cmd->add_option("--warmup", warmup,
-      "warmup calls before each measurement (default 1)");
+  run_cmd->add_option("--warmup", warmup, "warmup calls before each measurement (default 1)");
 
   run_cmd->allow_extras();
 
@@ -262,8 +245,7 @@ int main(int argc, char** argv) {
       }
       auto eq = tok.find('=');
       if (eq == std::string::npos) {
-        std::cerr << "ferret: --axis flags must be --name=value: "
-                  << tok << "\n";
+        std::cerr << "ferret: --axis flags must be --name=value: " << tok << "\n";
         return 2;
       }
       overrides[tok.substr(2, eq - 2)] = tok.substr(eq + 1);

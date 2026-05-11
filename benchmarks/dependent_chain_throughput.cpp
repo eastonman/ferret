@@ -24,13 +24,9 @@ struct DependentChainThroughput : Benchmark {
 
   std::string name() const override { return "dependent_chain_throughput"; }
 
-  SweepAxes axes() const override {
-    return { Axis::values("chain_length", {100'000'000}) };
-  }
+  SweepAxes axes() const override { return {Axis::values("chain_length", {100'000'000})}; }
 
-  size_t sites_per_kernel(const Params& p) const override {
-    return p.get<size_t>("chain_length");
-  }
+  size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("chain_length"); }
 
   size_t iterations(const Params&) const override { return 1; }
 
@@ -44,22 +40,15 @@ struct DependentChainThroughput : Benchmark {
     sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, 1);
 
     if (full_blocks > 0) {
-      sljit_emit_op1(c, SLJIT_MOV, SLJIT_R1, 0,
-                     SLJIT_IMM, static_cast<sljit_sw>(full_blocks));
+      sljit_emit_op1(c, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM, static_cast<sljit_sw>(full_blocks));
 
       sljit_label* loop_top = sljit_emit_label(c);
 
       for (int i = 0; i < UNROLL; ++i) {
-        sljit_emit_op2(c, SLJIT_ADD,
-                       SLJIT_R0, 0,
-                       SLJIT_R0, 0,
-                       SLJIT_IMM, 1);
+        sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
       }
 
-      sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z,
-                     SLJIT_R1, 0,
-                     SLJIT_R1, 0,
-                     SLJIT_IMM, 1);
+      sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, 1);
       sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
       sljit_set_label(back, loop_top);
     }
@@ -67,10 +56,7 @@ struct DependentChainThroughput : Benchmark {
     // Straight-line tail: exactly `remainder` ADDs so total ops match
     // chain_length to the op.
     for (size_t i = 0; i < remainder; ++i) {
-      sljit_emit_op2(c, SLJIT_ADD,
-                     SLJIT_R0, 0,
-                     SLJIT_R0, 0,
-                     SLJIT_IMM, 1);
+      sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
     }
 
     sljit_emit_return_void(c);

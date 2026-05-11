@@ -31,7 +31,8 @@ TEST(Csv, RowFormatNoFreq) {
   std::ostringstream os;
   CsvWriter w(os, "bench", {"x"}, std::nullopt);
   w.write_header();
-  Params p; p.set("x", 42);
+  Params p;
+  p.set("x", 42);
   MeasurementRow m;
   m.ticks_min = 1000;
   m.ticks_median = 1100;
@@ -48,7 +49,8 @@ TEST(Csv, RowJitFailedHasEmptyMetricColumns) {
   std::ostringstream os;
   CsvWriter w(os, "bench", {"x"}, std::nullopt);
   w.write_header();
-  Params p; p.set("x", 7);
+  Params p;
+  p.set("x", 7);
   MeasurementRow m;
   m.jit_failed = true;
   w.write_row(p, m, 2.0);

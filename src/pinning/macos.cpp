@@ -19,22 +19,15 @@ bool pin_to_core(int cpu) {
   // values when the policy can't be set, which lets the
   // PinToImpossiblyHighCoreReturnsFalse test pass on this OS.
   if (cpu < 0 || cpu > 1024) return false;
-  thread_affinity_policy_data_t policy = { cpu + 1 };
-  kern_return_t kr = thread_policy_set(
-      pthread_mach_thread_np(pthread_self()),
-      THREAD_AFFINITY_POLICY,
-      reinterpret_cast<thread_policy_t>(&policy),
-      THREAD_AFFINITY_POLICY_COUNT);
+  thread_affinity_policy_data_t policy = {cpu + 1};
+  kern_return_t kr = thread_policy_set(pthread_mach_thread_np(pthread_self()), THREAD_AFFINITY_POLICY,
+                                       reinterpret_cast<thread_policy_t>(&policy), THREAD_AFFINITY_POLICY_COUNT);
   return kr == KERN_SUCCESS;
 }
 
-bool boost_priority() {
-  return setpriority(PRIO_PROCESS, 0, -10) == 0;
-}
+bool boost_priority() { return setpriority(PRIO_PROCESS, 0, -10) == 0; }
 
-bool lock_memory() {
-  return mlockall(MCL_CURRENT | MCL_FUTURE) == 0;
-}
+bool lock_memory() { return mlockall(MCL_CURRENT | MCL_FUTURE) == 0; }
 
 }  // namespace ferret::pinning
 

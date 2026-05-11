@@ -18,19 +18,15 @@ int64_t parse_int(const std::string& s) {
   return v;
 }
 
-void validate_value_against_kind(int64_t v, const Axis& axis,
-                                 const std::string& cli_value) {
+void validate_value_against_kind(int64_t v, const Axis& axis, const std::string& cli_value) {
   if (axis.kind() == Axis::Kind::Log2Range && v <= 0) {
-    throw std::invalid_argument(
-        "log2 axis '" + axis.name() + "' requires positive values: " +
-        cli_value);
+    throw std::invalid_argument("log2 axis '" + axis.name() + "' requires positive values: " + cli_value);
   }
 }
 
 }  // namespace
 
-std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value,
-                                          const Axis& axis) {
+std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value, const Axis& axis) {
   auto dotdot = cli_value.find("..");
   if (dotdot != std::string::npos) {
     std::string lo_s = cli_value.substr(0, dotdot);

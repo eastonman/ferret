@@ -35,8 +35,7 @@ TEST(Padding, RoundsUpToInstructionMultipleOnAArch64) {
   // 16 bytes = 4 NOP instructions, each NOP increments compiler->size by 1
   // (sljit's size field counts instructions, not bytes, on aarch64).
   // We accept either: 16 (bytes) or 4 (insns).
-  EXPECT_TRUE(after - before == 4u || after - before == 16u)
-      << "size delta = " << (after - before);
+  EXPECT_TRUE(after - before == 4u || after - before == 16u) << "size delta = " << (after - before);
   sljit_emit_return_void(c);
   sljit_free_compiler(c);
 #else

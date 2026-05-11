@@ -9,7 +9,7 @@ using namespace ferret;
 namespace {
 struct DummyBench : Benchmark {
   std::string name() const override { return "dummy"; }
-  SweepAxes axes() const override { return { Axis::values("x", {1, 2, 3}) }; }
+  SweepAxes axes() const override { return {Axis::values("x", {1, 2, 3})}; }
   size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("x"); }
   size_t iterations(const Params&) const override { return 1; }
   void emit_kernel(sljit_compiler*, const Params&) override {}

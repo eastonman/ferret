@@ -15,7 +15,7 @@ struct sljit_compiler;
 namespace ferret {
 
 class Benchmark {
-public:
+ public:
   virtual ~Benchmark() = default;
   virtual std::string name() const = 0;
   virtual SweepAxes axes() const = 0;
@@ -25,7 +25,7 @@ public:
 };
 
 class BenchmarkRegistry {
-public:
+ public:
   using Factory = std::function<std::unique_ptr<Benchmark>()>;
 
   static void register_benchmark(std::string name, Factory factory);
@@ -37,13 +37,11 @@ public:
 
 // Registers a Benchmark subclass under a string name. Place at file
 // scope in any .cpp under benchmarks/.
-#define FERRET_BENCHMARK(NAME, CLASS)                                    \
-  namespace {                                                            \
-  const bool _ferret_register_##CLASS = []() {                           \
-    ::ferret::BenchmarkRegistry::register_benchmark(                     \
-        NAME, []() {                                                     \
-          return std::unique_ptr<::ferret::Benchmark>(new CLASS());      \
-        });                                                              \
-    return true;                                                         \
-  }();                                                                   \
+#define FERRET_BENCHMARK(NAME, CLASS)                                              \
+  namespace {                                                                      \
+  const bool _ferret_register_##CLASS = []() {                                     \
+    ::ferret::BenchmarkRegistry::register_benchmark(                               \
+        NAME, []() { return std::unique_ptr<::ferret::Benchmark>(new CLASS()); }); \
+    return true;                                                                   \
+  }();                                                                             \
   }

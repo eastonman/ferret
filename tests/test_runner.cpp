@@ -8,9 +8,7 @@
 using namespace ferret;
 
 namespace {
-void slow_kernel_100us() {
-  std::this_thread::sleep_for(std::chrono::microseconds(100));
-}
+void slow_kernel_100us() { std::this_thread::sleep_for(std::chrono::microseconds(100)); }
 void noop_kernel() {}
 }  // namespace
 
@@ -40,13 +38,10 @@ TEST(Runner, KernelInvokedAtLeastWarmupPlusKTimes) {
 }
 
 TEST(Runner, RejectsNonPositiveK) {
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/0, /*warmup=*/1),
-               std::invalid_argument);
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/-1, /*warmup=*/1),
-               std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/0, /*warmup=*/1), std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/-1, /*warmup=*/1), std::invalid_argument);
 }
 
 TEST(Runner, RejectsNegativeWarmup) {
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/3, /*warmup=*/-1),
-               std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/3, /*warmup=*/-1), std::invalid_argument);
 }

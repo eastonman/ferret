@@ -23,8 +23,7 @@ using KernelFn = void (*)(void);
 // iters and sites are not used by measure() to drive iteration count —
 // they are passed through to MeasurementRow purely for normalization
 // downstream.
-MeasurementRow measure(KernelFn fn, size_t iters, size_t sites,
-                       int K, int warmup);
+MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmup);
 
 }  // namespace runner
 }  // namespace ferret

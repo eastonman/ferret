@@ -4,18 +4,14 @@
 
 namespace ferret::sweep {
 
-std::vector<Params> expand(
-    const SweepAxes& axes,
-    const std::map<std::string, std::vector<int64_t>>& overrides) {
+std::vector<Params> expand(const SweepAxes& axes, const std::map<std::string, std::vector<int64_t>>& overrides) {
   std::vector<std::pair<std::string, std::vector<int64_t>>> resolved;
   resolved.reserve(axes.size());
   for (const Axis& a : axes) {
     auto it = overrides.find(a.name());
-    std::vector<int64_t> values =
-        (it != overrides.end()) ? it->second : a.expand();
+    std::vector<int64_t> values = (it != overrides.end()) ? it->second : a.expand();
     if (values.empty()) {
-      throw std::invalid_argument(
-          "Axis '" + a.name() + "' has no values to sweep");
+      throw std::invalid_argument("Axis '" + a.name() + "' has no values to sweep");
     }
     resolved.emplace_back(a.name(), std::move(values));
   }

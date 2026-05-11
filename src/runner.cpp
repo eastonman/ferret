@@ -8,8 +8,7 @@
 
 namespace ferret::runner {
 
-MeasurementRow measure(KernelFn fn, size_t iters, size_t sites,
-                       int K, int warmup) {
+MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmup) {
   if (K <= 0) {
     throw std::invalid_argument("runner::measure: K (reps) must be >= 1");
   }
