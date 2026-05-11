@@ -23,3 +23,10 @@ target_link_libraries(test_sweep PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_sweep)
+
+add_executable(test_cli_axis test_cli_axis.cpp)
+target_link_libraries(test_cli_axis PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_cli_axis)
