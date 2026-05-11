@@ -21,8 +21,10 @@
             pkgs.cmake
             pkgs.ninja
             pkgs.clang
+            pkgs.clang-tools
             pkgs.cli11
             pkgs.gtest
+            pkgs.ruff
             sljit
             (pkgs.python3.withPackages (ps: [ ps.matplotlib ps.pandas ]))
           ];
