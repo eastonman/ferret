@@ -73,3 +73,20 @@ target_link_libraries(test_padding PRIVATE
   GTest::gtest GTest::gtest_main
 )
 gtest_discover_tests(test_padding)
+
+add_executable(test_integration test_integration.cpp)
+target_compile_definitions(test_integration PRIVATE
+  FERRET_BINARY="$<TARGET_FILE:ferret>"
+)
+add_dependencies(test_integration ferret)
+target_link_libraries(test_integration PRIVATE
+  GTest::gtest GTest::gtest_main
+)
+# Per-test wall-clock timeout enforced by CTest itself (portable across
+# Linux/macOS/BSD without depending on a `timeout` binary). 30 s is much
+# longer than the longest legitimate integration test (~0.5 s for the
+# valid sweeps); a regression that re-introduces a hang would manifest
+# as a CTest TIMEOUT on the relevant entry rather than a wedged process.
+gtest_discover_tests(test_integration
+  PROPERTIES TIMEOUT 30
+)
