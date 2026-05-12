@@ -93,6 +93,7 @@ add_library(ferret_core STATIC
   src/runner.cpp
   src/padding.cpp
   src/log.cpp
+  src/permute.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
 target_link_libraries(ferret_core PUBLIC sljit::sljit spdlog::spdlog)
