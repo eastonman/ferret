@@ -1,24 +1,32 @@
-# ferret
+# Ferret
 
-FrontEnd Reverse-engineering Toolkit — a JIT-driven cross-platform
+**F**ront**E**nd **R**eve**R**se-**E**ngineering **T**oolkit — a JIT-driven cross-platform
 microbenchmark framework for probing CPU frontend microarchitectural
 structures (BTB, RAS, BPU, decoded-uop cache, ITLB, …).
 
-ferret emits parameterized microbenchmarks at runtime, measures their
+Ferret emits parameterized microbenchmarks at runtime, measures their
 per-site cost via free-running timing counters, sweeps a parameter axis,
 and writes one CSV row per parameter point. A Python script plots the
 resulting curves so you can spot capacity/associativity cliffs.
 
-## Supported platforms (v1)
+## Supported platforms
 
-| Arch     | Linux | macOS | Android |
-|----------|:---:|:---:|:---:|
-| x86_64   |  ✓  |  —  |  ✓  |
-| AArch64  |  ✓  |  ✓  |  ✓  |
+| Arch    | Linux | macOS | Android |
+| ------- | :---: | :---: | :-----: |
+| x86_64  |   ✓   |   —   |    ✓    |
+| AArch64 |   ✓   |   ✓   |    ✓    |
 
-RISC-V and LoongArch are reachable through sljit but not enabled in v1.
+RISC-V and LoongArch are reachable through sljit but not yet supported
 
 ## Build
+
+### Dependency requirements
+
+- C++20 compiler
+- CMake > 3.20
+- Ninja or GNU Make
+- Python 3
+- Git (for FetchContent and submodules)
 
 ### Nix (recommended)
 
@@ -31,6 +39,7 @@ ctest --test-dir build --output-on-failure
 
 ### Plain CMake
 
+Make sure the dependency requirements above are installed.
 CMake will FetchContent CLI11, GoogleTest, and sljit if they aren't on
 the system search path:
 
@@ -117,9 +126,9 @@ responsibility:
 
 - **Frequency scaling.** ferret cannot pin core frequency without root.
   Run with a fixed-frequency governor (Linux: `cpupower frequency-set
-  -g performance`) or document that boost was active.
+-g performance`) or document that boost was active.
 - **Heterogeneous cores** (Apple P/E, ARM big.LITTLE, Android). Pin
-  with `--core=` so probe and target benchmark execute on the *same*
+  with `--core=` so probe and target benchmark execute on the _same_
   core. Different cores can have different microarchitectures and
   different running frequencies.
 - **Frequency-probe assumption.** `dependent_chain_throughput` assumes
