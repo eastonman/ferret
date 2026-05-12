@@ -73,6 +73,10 @@ Testing/
 # AI Agent and Orchestration
 .humanize/
 
+# Nix
+.direnv/
+result
+
 # Python
 __pycache__/
 *.py[cod]
