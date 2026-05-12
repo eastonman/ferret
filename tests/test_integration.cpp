@@ -244,6 +244,50 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
   EXPECT_EQ(0u, std::filesystem::file_size(out));
 }
 
+namespace {
+
+void expect_spacing_rejected(const std::string& spacing_arg) {
+  auto out = std::filesystem::temp_directory_path() / ("ferret_spacing_" + spacing_arg + ".csv");
+  auto err = std::filesystem::temp_directory_path() / ("ferret_spacing_" + spacing_arg + "_err.txt");
+  std::filesystem::remove(out);
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run direct_branch_footprint"
+                    " --branches=1,2 --spacing_bytes=" +
+                    spacing_arg +
+                    " --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string() + " 2> " + err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "spacing=" << spacing_arg << ": expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos)
+      << "spacing=" << spacing_arg << ": stderr=" << err_contents;
+  EXPECT_TRUE(!std::filesystem::exists(out) || std::filesystem::file_size(out) == 0u)
+      << "spacing=" << spacing_arg << ": partial CSV emitted";
+}
+
+}  // namespace
+
+#if defined(__aarch64__) || defined(_M_ARM64)
+// AArch64 instructions are 4-byte fixed-width and 4-byte aligned, so the
+// per-branch stride must be a multiple of 4. spacing=5 violates that.
+TEST(Integration, AArch64SpacingNotMultipleOfFourExitsTwoNoCrash) { expect_spacing_rejected("5"); }
+
+// spacing=2 cannot hold a 4-byte AArch64 branch and also fails the
+// multiple-of-4 alignment requirement — either rejection mechanism is
+// sufficient; the kernel must not run.
+TEST(Integration, AArch64SpacingLessThanFourExitsTwoNoCrash) { expect_spacing_rejected("2"); }
+#endif
+
+#if defined(__x86_64__) || defined(_M_X64)
+// x86_64 has no alignment requirement, but spacing must still hold one
+// branch instruction. The smallest sljit SLJIT_JUMP encoding is a
+// 2-byte rel8 short jump, so spacing=1 cannot represent a valid layout
+// and must be rejected.
+TEST(Integration, X86SpacingSmallerThanBranchExitsTwoNoCrash) { expect_spacing_rejected("1"); }
+#endif
+
 TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
   // spacing_bytes=-1 cast to size_t made emit_nops loop SIZE_MAX times.
   // The log2_range axis policy rejects negative values at CLI parse,
