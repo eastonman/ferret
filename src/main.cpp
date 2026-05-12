@@ -101,6 +101,20 @@ int do_list() {
   return 0;
 }
 
+int64_t parse_option_value(const std::string& v) {
+  size_t pos = 0;
+  int64_t parsed = 0;
+  try {
+    parsed = std::stoll(v, &pos);
+  } catch (const std::exception&) {
+    throw std::invalid_argument("not an integer: " + v);
+  }
+  if (pos != v.size()) {
+    throw std::invalid_argument("trailing junk after integer: " + v);
+  }
+  return parsed;
+}
+
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int do_run(const std::string& name, const std::map<std::string, std::string>& cli_axis_overrides,
            const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
@@ -110,23 +124,45 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
     return 2;
   }
 
-  std::map<std::string, std::vector<int64_t>> overrides;
   ferret::SweepAxes axes = bench->axes();
+  ferret::BenchOptions options = bench->options();
+  std::map<std::string, int64_t> option_values;
+  for (const auto& o : options) {
+    option_values[o.name] = o.default_value;
+  }
+
+  std::map<std::string, std::vector<int64_t>> overrides;
   for (const auto& [k, v] : cli_axis_overrides) {
-    const ferret::Axis* matching = nullptr;
+    const ferret::Axis* axis_match = nullptr;
     for (const auto& a : axes) {
       if (a.name() == k) {
-        matching = &a;
+        axis_match = &a;
+        break;
       }
     }
-    if (matching == nullptr) {
-      flog::error("unknown axis --{} for benchmark {}", k, name);
-      return 2;
+    const ferret::BenchOption* opt_match = nullptr;
+    for (const auto& o : options) {
+      if (o.name == k) {
+        opt_match = &o;
+        break;
+      }
     }
-    try {
-      overrides[k] = ferret::parse_cli_axis_value(v, *matching);
-    } catch (const std::exception& e) {
-      flog::error("invalid value for --{}: {}", k, e.what());
+    if (axis_match != nullptr) {
+      try {
+        overrides[k] = ferret::parse_cli_axis_value(v, *axis_match);
+      } catch (const std::exception& e) {
+        flog::error("invalid value for --{}: {}", k, e.what());
+        return 2;
+      }
+    } else if (opt_match != nullptr) {
+      try {
+        option_values[k] = parse_option_value(v);
+      } catch (const std::exception& e) {
+        flog::error("invalid value for --{}: {}", k, e.what());
+        return 2;
+      }
+    } else {
+      flog::error("unknown axis or option --{} for benchmark {}", k, name);
       return 2;
     }
   }
@@ -137,6 +173,13 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   } catch (const std::exception& e) {
     flog::error("invalid sweep: {}", e.what());
     return 2;
+  }
+
+  // Inject non-swept options into every row so they're recorded in CSV.
+  for (auto& p : rows) {
+    for (const auto& [k, v] : option_values) {
+      p.set(k, v);
+    }
   }
 
   if (core >= 0) {
@@ -165,6 +208,9 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   std::vector<std::string> axis_cols;
   for (const auto& a : axes) {
     axis_cols.push_back(a.name());
+  }
+  for (const auto& o : options) {
+    axis_cols.push_back(o.name);
   }
 
   // tpns is the divisor for every CSV row; non-finite or zero would leak
