@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -14,11 +15,21 @@ struct sljit_compiler;
 
 namespace ferret {
 
+// Scalar per-benchmark option: not swept, surfaced as `--<name>=<v>`,
+// injected into every Params row and emitted as a CSV column after axes.
+struct BenchOption {
+  std::string name;
+  int64_t default_value;
+};
+
+using BenchOptions = std::vector<BenchOption>;
+
 class Benchmark {
  public:
   virtual ~Benchmark() = default;
   virtual std::string name() const = 0;
   virtual SweepAxes axes() const = 0;
+  virtual BenchOptions options() const { return {}; }
   virtual size_t sites_per_kernel(const Params& p) const = 0;
   virtual size_t iterations(const Params& p) const = 0;
   virtual void emit_kernel(sljit_compiler* c, const Params& p) = 0;

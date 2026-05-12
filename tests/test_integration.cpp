@@ -74,6 +74,20 @@ int actual_exit_code(int sys_status) {
 }
 }  // namespace
 
+TEST(Integration, UnknownOptionRejected) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_unknown_opt_err.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run direct_branch_footprint"
+                    " --branches=1 --spacing_bytes=64 --reps=2 --warmup=1"
+                    " --no_such_thing=1 2> " +
+                    err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  std::string err_contents = slurp(err.string());
+  EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+}
+
 TEST(Integration, InvalidFreqExitsTwoNoCrash) {
   auto err = std::filesystem::temp_directory_path() / "ferret_freq_err.txt";
   std::filesystem::remove(err);
