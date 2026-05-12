@@ -35,20 +35,6 @@ int do_list() {
   return 0;
 }
 
-int64_t parse_option_value(const std::string& v) {
-  size_t pos = 0;
-  int64_t parsed = 0;
-  try {
-    parsed = std::stoll(v, &pos);
-  } catch (const std::exception&) {
-    throw std::invalid_argument("not an integer: " + v);
-  }
-  if (pos != v.size()) {
-    throw std::invalid_argument("trailing junk after integer: " + v);
-  }
-  return parsed;
-}
-
 // NOLINTBEGIN(readability-function-cognitive-complexity,bugprone-easily-swappable-parameters)
 int do_run(const std::string& name, const std::map<std::string, std::string>& cli_axis_overrides,
            const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup, int64_t seed) {
@@ -91,7 +77,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
     } else if (opt_match != nullptr) {
       try {
-        option_values[k] = parse_option_value(v);
+        option_values[k] = ferret::parse_option_value(v);
       } catch (const std::exception& e) {
         flog::error("invalid value for --{}: {}", k, e.what());
         return 2;
@@ -262,17 +248,11 @@ int main(int argc, char** argv) {
     }
 
     std::map<std::string, std::string> overrides;
-    for (const auto& tok : run_cmd->remaining()) {
-      if (tok.size() < 3 || tok[0] != '-' || tok[1] != '-') {
-        flog::error("unexpected argument: {}", tok);
-        return 2;
-      }
-      auto eq = tok.find('=');
-      if (eq == std::string::npos) {
-        flog::error("--axis flags must be --name=value: {}", tok);
-        return 2;
-      }
-      overrides[tok.substr(2, eq - 2)] = tok.substr(eq + 1);
+    try {
+      overrides = ferret::parse_extras(run_cmd->remaining());
+    } catch (const std::exception& e) {
+      flog::error("{}", e.what());
+      return 2;
     }
 
     std::optional<double> freq_hz;

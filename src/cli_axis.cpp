@@ -1,6 +1,7 @@
 #include "ferret/cli_axis.hpp"
 
 #include <charconv>
+#include <map>
 #include <sstream>
 #include <stdexcept>
 
@@ -64,6 +65,36 @@ std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value, const Ax
   }
   if (out.empty()) {
     throw std::invalid_argument("no values: " + cli_value);
+  }
+  return out;
+}
+
+int64_t parse_option_value(const std::string& v) {
+  if (v.empty()) {
+    throw std::invalid_argument("not an integer: " + v);
+  }
+  int64_t parsed = 0;
+  auto [p, ec] = std::from_chars(v.data(), v.data() + v.size(), parsed);
+  if (ec != std::errc{}) {
+    throw std::invalid_argument("not an integer: " + v);
+  }
+  if (p != v.data() + v.size()) {
+    throw std::invalid_argument("trailing junk after integer: " + v);
+  }
+  return parsed;
+}
+
+std::map<std::string, std::string> parse_extras(const std::vector<std::string>& tokens) {
+  std::map<std::string, std::string> out;
+  for (const auto& tok : tokens) {
+    if (tok.size() < 3 || tok[0] != '-' || tok[1] != '-') {
+      throw std::invalid_argument("unexpected argument: " + tok);
+    }
+    auto eq = tok.find('=');
+    if (eq == std::string::npos) {
+      throw std::invalid_argument("--axis flags must be --name=value: " + tok);
+    }
+    out[tok.substr(2, eq - 2)] = tok.substr(eq + 1);
   }
   return out;
 }
