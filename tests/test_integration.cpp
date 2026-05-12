@@ -246,8 +246,9 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
 
 TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
   // spacing_bytes=-1 cast to size_t made emit_nops loop SIZE_MAX times.
-  // Now Params::get<size_t> rejects the negative value. CTest TIMEOUT
-  // property (see tests/CMakeLists.txt) catches any regression.
+  // The log2_range axis policy rejects negative values at CLI parse,
+  // before any output file is opened. CTest TIMEOUT (tests/CMakeLists.txt)
+  // catches any regression that hangs instead of exiting.
   auto out = std::filesystem::temp_directory_path() / "ferret_spacingNeg.csv";
   auto err = std::filesystem::temp_directory_path() / "ferret_spacingNeg_err.txt";
   std::filesystem::remove(out);
@@ -261,8 +262,9 @@ TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
   EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
-  ASSERT_TRUE(std::filesystem::exists(out));
-  EXPECT_EQ(0u, std::filesystem::file_size(out));
+  // No partial output: either the file was not created at all, or it
+  // was opened and left empty.
+  EXPECT_TRUE(!std::filesystem::exists(out) || std::filesystem::file_size(out) == 0u);
 }
 
 TEST(Integration, ZeroChainLengthExitsTwoNoCrash) {

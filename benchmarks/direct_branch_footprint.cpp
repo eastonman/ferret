@@ -24,7 +24,7 @@ struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] SweepAxes axes() const override {
     return {
         Axis::log2_range("branches", 1, 1 << 15),
-        Axis::values("spacing_bytes", {16, 32, 64, 128}),
+        Axis::log2_range("spacing_bytes", 16, 128),
     };
   }
 
