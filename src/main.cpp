@@ -70,6 +70,7 @@ double parse_freq(const std::string& s) {
 
 struct JittedKernel {
   void* code = nullptr;
+  size_t code_size = 0;
 };
 
 JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
@@ -83,8 +84,9 @@ JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
     return {};
   }
   void* code = sljit_generate_code(c, 0, nullptr);
+  size_t code_size = sljit_get_generated_code_size(c);
   sljit_free_compiler(c);
-  return {code};
+  return {.code = code, .code_size = code_size};
 }
 
 void jit_free(JittedKernel& k) {
@@ -248,6 +250,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
         m.sites = pre_sites;
         flog::warn("sljit_error on params; emitting empty row");
       } else {
+        flog::info("jit kernel: {} bytes", kern.code_size);
         auto fn = reinterpret_cast<void (*)()>(kern.code);
         m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
         jit_free(kern);
