@@ -10,13 +10,10 @@
 #include <string>
 #include <vector>
 
-extern "C" {
-#include <sljitLir.h>
-}
-
 #include "ferret/benchmark.hpp"
 #include "ferret/cli_axis.hpp"
 #include "ferret/csv.hpp"
+#include "ferret/jit.hpp"
 #include "ferret/log.hpp"
 #include "ferret/pinning.hpp"
 #include "ferret/runner.hpp"
@@ -66,34 +63,6 @@ double parse_freq(const std::string& s) {
     fail("must be positive");
   }
   return hz;
-}
-
-struct JittedKernel {
-  void* code = nullptr;
-  size_t code_size = 0;
-};
-
-JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
-  sljit_compiler* c = sljit_create_compiler(nullptr);
-  if (c == nullptr) {
-    return {};
-  }
-  b.emit_kernel(c, p);
-  if (sljit_get_compiler_error(c) != SLJIT_SUCCESS) {
-    sljit_free_compiler(c);
-    return {};
-  }
-  void* code = sljit_generate_code(c, 0, nullptr);
-  size_t code_size = sljit_get_generated_code_size(c);
-  sljit_free_compiler(c);
-  return {.code = code, .code_size = code_size};
-}
-
-void jit_free(JittedKernel& k) {
-  if (k.code != nullptr) {
-    sljit_free_code(k.code, nullptr);
-  }
-  k.code = nullptr;
 }
 
 int do_list() {
@@ -234,7 +203,6 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
 
   for (const auto& p : rows) {
     ferret::MeasurementRow m;
-    JittedKernel kern;
     try {
       size_t pre_iters = bench->iterations(p);
       size_t pre_sites = bench->sites_per_kernel(p);
@@ -243,20 +211,17 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
         return 2;
       }
 
-      kern = jit_compile(*bench, p);
-      if (kern.code == nullptr) {
+      ferret::JittedKernel kern(*bench, p);
+      if (!kern.ok()) {
         m.jit_failed = true;
         m.iters = pre_iters;
         m.sites = pre_sites;
         flog::warn("sljit_error on params; emitting empty row");
       } else {
-        flog::info("jit kernel: {} bytes", kern.code_size);
-        auto fn = reinterpret_cast<void (*)()>(kern.code);
-        m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
-        jit_free(kern);
+        flog::info("jit kernel: {} bytes", kern.code_size());
+        m = ferret::runner::measure(kern.fn(), pre_iters, pre_sites, K, warmup);
       }
     } catch (const std::exception& e) {
-      jit_free(kern);
       flog::error("benchmark error on params: {}", e.what());
       return 2;
     }
