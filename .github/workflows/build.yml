@@ -1,0 +1,35 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    name: build-test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install ninja (linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: install ninja (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: configure
+        run: cmake -S . -B build -GNinja
+
+      - name: build
+        run: cmake --build build
+
+      - name: test
+        run: ctest --test-dir build --output-on-failure

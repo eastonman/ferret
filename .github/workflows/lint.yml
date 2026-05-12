@@ -1,0 +1,20 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  format-lint:
+    name: format-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - name: configure + lint (in devshell, pinned tool versions)
+        run: |
+          nix develop --command bash -c \
+            "cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && ./scripts/lint.sh"

@@ -1,0 +1,23 @@
+name: nix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  nix:
+    name: nix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - name: flake check
+        run: nix flake check
+      - name: build
+        run: nix build
+      - name: test in devshell
+        run: |
+          nix develop --command bash -c \
+            "cmake -S . -B build -GNinja && cmake --build build && ctest --test-dir build --output-on-failure"
