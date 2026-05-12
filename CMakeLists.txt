@@ -83,6 +83,7 @@ add_library(ferret_core STATIC
   src/axis.cpp
   src/sweep.cpp
   src/cli_axis.cpp
+  src/freq.cpp
   src/jit.cpp
   src/timing/x86_64.cpp
   src/timing/aarch64.cpp
