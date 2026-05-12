@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(ferret LANGUAGES CXX)
+project(ferret LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -93,6 +93,8 @@ target_link_libraries(ferret PRIVATE
   CLI11::CLI11
   sljit::sljit
 )
+
+install(TARGETS ferret RUNTIME DESTINATION bin)
 
 enable_testing()
 include(GoogleTest)
