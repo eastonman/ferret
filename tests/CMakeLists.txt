@@ -74,6 +74,13 @@ target_link_libraries(test_padding PRIVATE
 )
 gtest_discover_tests(test_padding)
 
+add_executable(test_permute test_permute.cpp)
+target_link_libraries(test_permute PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_permute)
+
 add_executable(test_integration test_integration.cpp)
 target_compile_definitions(test_integration PRIVATE
   FERRET_BINARY="$<TARGET_FILE:ferret>"
