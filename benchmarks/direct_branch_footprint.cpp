@@ -3,12 +3,15 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <cstdint>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "ferret/benchmark.hpp"
 #include "ferret/padding.hpp"
+#include "ferret/permute.hpp"
 
 namespace ferret {
 
@@ -41,14 +44,14 @@ constexpr size_t kMinBranchBytes = 2;
 
 }  // namespace
 
-// N unconditional direct branches, each at PC = base + i * spacing_bytes,
-// chained so each branch falls through to the next. Wrapped in an outer
-// loop of `iters` so the work amortizes the runner's tick-read overhead.
+// N unconditional direct branches at PC = base + i * spacing_bytes,
+// chained so exactly N branches execute per outer-loop iteration; the
+// outer loop amortizes the runner's tick-read overhead.
 //
-// Padding: each branch is followed by NOPs that bring the next branch's
-// start to the requested spacing. We measure the running compiler size
-// before/after sljit_emit_jump to know how many bytes the jump consumed,
-// then emit `spacing - jump_size` NOPs.
+// `sattolo_permute=1` rewires the jump targets as a single Hamiltonian
+// cycle to defeat spatial I-cache prefetch, isolating the BTB
+// contribution. Seed is mixed with branches/spacing so distinct
+// (N, spacing) get distinct cycles.
 struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] std::string name() const override { return "direct_branch_footprint"; }
 
@@ -57,6 +60,10 @@ struct DirectBranchFootprint : Benchmark {
         Axis::log2_range("branches", 1, 1 << 15),
         Axis::log2_range("spacing_bytes", 16, 128),
     };
+  }
+
+  [[nodiscard]] BenchOptions options() const override {
+    return {BenchOption{.name = "sattolo_permute", .default_value = 0}};
   }
 
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
@@ -68,6 +75,8 @@ struct DirectBranchFootprint : Benchmark {
   void emit_kernel(sljit_compiler* c, const Params& p) override {
     auto branches = p.get<size_t>("branches");
     auto spacing = p.get<size_t>("spacing_bytes");
+    auto sattolo = p.get<int64_t>("sattolo_permute");
+    auto seed = static_cast<uint64_t>(p.get<int64_t>("seed"));
     size_t iters = iterations(p);
 
     // Static ISA-level checks — done before touching the compiler so a
@@ -110,8 +119,27 @@ struct DirectBranchFootprint : Benchmark {
     }
     labels[branches] = sljit_emit_label(c);
 
+    // next[i] = label index branch i targets; labels[branches] is the
+    // post-chain exit so the outer-loop decrement runs once per iteration.
+    std::vector<size_t> next(branches);
+    if (sattolo == 0) {
+      std::iota(next.begin(), next.end(), size_t{1});
+    } else {
+      uint64_t mixed = seed ^ (static_cast<uint64_t>(branches) * 0x9E3779B97F4A7C15ULL) ^
+                       (static_cast<uint64_t>(spacing) * 0xBF58476D1CE4E5B9ULL);
+      next = sattolo_cycle(branches, mixed);
+      // Break the unique edge k→0 so the chain exits to labels[branches]
+      // after exactly N branches instead of looping forever.
+      for (size_t k = 0; k < branches; ++k) {
+        if (next[k] == 0) {
+          next[k] = branches;
+          break;
+        }
+      }
+    }
+
     for (size_t i = 0; i < branches; ++i) {
-      sljit_set_label(jumps[i], labels[i + 1]);
+      sljit_set_label(jumps[i], labels[next[i]]);
     }
 
     sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
