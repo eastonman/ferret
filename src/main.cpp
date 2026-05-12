@@ -23,7 +23,10 @@ extern "C" {
 #include "ferret/sweep.hpp"
 #include "ferret/timing.hpp"
 
-namespace log = ferret::log;
+// Aliased as `flog` (not `log`) to avoid colliding with the C library
+// `::log(double)` declared in <math.h> on glibc, which leaks into the
+// global namespace via transitive includes (e.g., <filesystem>).
+namespace flog = ferret::log;
 
 namespace {
 
@@ -103,7 +106,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
            const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
   auto bench = ferret::BenchmarkRegistry::create(name);
   if (!bench) {
-    log::error("unknown benchmark '{}'. Try `ferret list`.", name);
+    flog::error("unknown benchmark '{}'. Try `ferret list`.", name);
     return 2;
   }
 
@@ -117,13 +120,13 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
     }
     if (matching == nullptr) {
-      log::error("unknown axis --{} for benchmark {}", k, name);
+      flog::error("unknown axis --{} for benchmark {}", k, name);
       return 2;
     }
     try {
       overrides[k] = ferret::parse_cli_axis_value(v, *matching);
     } catch (const std::exception& e) {
-      log::error("invalid value for --{}: {}", k, e.what());
+      flog::error("invalid value for --{}: {}", k, e.what());
       return 2;
     }
   }
@@ -132,20 +135,20 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   try {
     rows = ferret::sweep::expand(axes, overrides);
   } catch (const std::exception& e) {
-    log::error("invalid sweep: {}", e.what());
+    flog::error("invalid sweep: {}", e.what());
     return 2;
   }
 
   if (core >= 0) {
     if (!ferret::pinning::pin_to_core(core)) {
-      log::warn("pin_to_core({}) failed", core);
+      flog::warn("pin_to_core({}) failed", core);
     }
   }
   if (!ferret::pinning::boost_priority()) {
-    log::warn("boost_priority failed");
+    flog::warn("boost_priority failed");
   }
   if (!ferret::pinning::lock_memory()) {
-    log::warn("mlockall failed");
+    flog::warn("mlockall failed");
   }
 
   std::ofstream ofs;
@@ -153,7 +156,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   if (!out_path.empty()) {
     ofs.open(out_path);
     if (!ofs) {
-      log::error("cannot open output: {}", out_path);
+      flog::error("cannot open output: {}", out_path);
       return 2;
     }
     out_stream = &ofs;
@@ -168,7 +171,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   // inf/nan into output.
   double tpns = ferret::timing::ticks_per_ns();
   if (!std::isfinite(tpns) || !(tpns > 0.0)) {
-    log::error("ticks_per_ns calibration returned non-finite or non-positive value: {}", tpns);
+    flog::error("ticks_per_ns calibration returned non-finite or non-positive value: {}", tpns);
     return 2;
   }
 
@@ -185,7 +188,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       size_t pre_iters = bench->iterations(p);
       size_t pre_sites = bench->sites_per_kernel(p);
       if (pre_iters == 0 || pre_sites == 0) {
-        log::error("invalid params: yields zero work (iterations={}, sites_per_kernel={})", pre_iters, pre_sites);
+        flog::error("invalid params: yields zero work (iterations={}, sites_per_kernel={})", pre_iters, pre_sites);
         return 2;
       }
 
@@ -194,7 +197,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
         m.jit_failed = true;
         m.iters = pre_iters;
         m.sites = pre_sites;
-        log::warn("sljit_error on params; emitting empty row");
+        flog::warn("sljit_error on params; emitting empty row");
       } else {
         auto fn = reinterpret_cast<void (*)()>(kern.code);
         m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
@@ -202,7 +205,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
     } catch (const std::exception& e) {
       jit_free(kern);
-      log::error("benchmark error on params: {}", e.what());
+      flog::error("benchmark error on params: {}", e.what());
       return 2;
     }
     buffered.emplace_back(p, m);
@@ -222,7 +225,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, char** argv) {
-  log::init();
+  flog::init();
 
   CLI::App app{"ferret — frontend reverse-engineering toolkit"};
   app.require_subcommand(1);
@@ -259,7 +262,7 @@ int main(int argc, char** argv) {
 
   CLI11_PARSE(app, argc, argv);
 
-  log::set_level(log::parse_level(log_level_str));
+  flog::set_level(flog::parse_level(log_level_str));
 
   if (*list_cmd) {
     return do_list();
@@ -267,23 +270,23 @@ int main(int argc, char** argv) {
 
   if (*run_cmd) {
     if (K < 1) {
-      log::error("--reps must be >= 1 (got {})", K);
+      flog::error("--reps must be >= 1 (got {})", K);
       return 2;
     }
     if (warmup < 0) {
-      log::error("--warmup must be >= 0 (got {})", warmup);
+      flog::error("--warmup must be >= 0 (got {})", warmup);
       return 2;
     }
 
     std::map<std::string, std::string> overrides;
     for (const auto& tok : run_cmd->remaining()) {
       if (tok.size() < 3 || tok[0] != '-' || tok[1] != '-') {
-        log::error("unexpected argument: {}", tok);
+        flog::error("unexpected argument: {}", tok);
         return 2;
       }
       auto eq = tok.find('=');
       if (eq == std::string::npos) {
-        log::error("--axis flags must be --name=value: {}", tok);
+        flog::error("--axis flags must be --name=value: {}", tok);
         return 2;
       }
       overrides[tok.substr(2, eq - 2)] = tok.substr(eq + 1);
@@ -294,7 +297,7 @@ int main(int argc, char** argv) {
       try {
         freq_hz = parse_freq(freq_str);
       } catch (const std::exception& e) {
-        log::error("invalid {}", e.what());
+        flog::error("invalid {}", e.what());
         return 2;
       }
     }
