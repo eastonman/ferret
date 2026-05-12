@@ -131,6 +131,15 @@ responsibility:
   with `--core=` so probe and target benchmark execute on the _same_
   core. Different cores can have different microarchitectures and
   different running frequencies.
+- **Apple Silicon pinning.** macOS on arm64 (M-series) does not
+  implement per-core thread affinity — `thread_policy_set` returns
+  `KERN_NOT_SUPPORTED` for every core number. On that platform ferret
+  falls back to a `QOS_CLASS_USER_INTERACTIVE` hint that strongly
+  prefers the P-cluster, prints a warning, and treats `--core=N` as
+  informational. Probe and benchmark land on _some_ P-core, not
+  necessarily the same one, so cycle counts are stable per-cluster but
+  not per-core. Run with `taskpolicy -b` or `sudo nice` if you need
+  stronger guarantees.
 - **Frequency-probe assumption.** `dependent_chain_throughput` assumes
   dependent ADD latency = 1 cycle. This holds on every common high-perf
   out-of-order core and on in-order ARM Cortex-A class cores. If you
