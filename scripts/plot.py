@@ -59,6 +59,7 @@ def main():
     ap.add_argument("csv")
     ap.add_argument("--out", default=None, help="output image path; default shows interactively")
     ap.add_argument("--x", default=None, help="X-axis column name")
+    ap.add_argument("--ymax", type=float, default=None, help="upper limit for the Y axis")
     args = ap.parse_args()
 
     df = pd.read_csv(args.csv)
@@ -91,7 +92,7 @@ def main():
     ax.xaxis.set_minor_formatter(mticker.NullFormatter())
     ax.set_xlabel(xcol)
     ax.set_ylabel(ylabel)
-    ax.set_ylim(bottom=0)
+    ax.set_ylim(bottom=0, top=args.ymax)
     bench = df["benchmark"].iloc[0] if "benchmark" in df.columns else "ferret"
     ax.set_title(f"{bench}: {ylabel} vs {xcol}")
     ax.grid(True, which="both", linestyle="--", alpha=0.4)
