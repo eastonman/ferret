@@ -34,6 +34,17 @@ if(NOT CLI11_FOUND)
   FetchContent_MakeAvailable(CLI11)
 endif()
 
+# --- spdlog: find_package first, FetchContent fallback ---
+find_package(spdlog QUIET)
+if(NOT spdlog_FOUND)
+  include(FetchContent)
+  FetchContent_Declare(spdlog
+    GIT_REPOSITORY https://github.com/gabime/spdlog.git
+    GIT_TAG v1.14.1
+  )
+  FetchContent_MakeAvailable(spdlog)
+endif()
+
 # --- sljit: find headers + library on the system path first, fall back
 # to FetchContent of upstream. The Nix derivation installs into
 # $out/include/sljit/sljitLir.h and $out/lib/libsljit.a.
@@ -81,9 +92,10 @@ add_library(ferret_core STATIC
   src/output/csv.cpp
   src/runner.cpp
   src/padding.cpp
+  src/log.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
-target_link_libraries(ferret_core PUBLIC sljit::sljit)
+target_link_libraries(ferret_core PUBLIC sljit::sljit spdlog::spdlog)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
 
 add_executable(ferret

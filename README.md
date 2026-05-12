@@ -89,6 +89,7 @@ ferret run <name> [options] [--<axis>=value-or-range]
   --freq=4.521GHz   running frequency, enables cycle columns
   --reps=K          repetitions per param point (default 7)
   --warmup=W        un-timed calls before measurement (default 1)
+  --log-level=L     trace|debug|info|warn|error|critical|off (default warn)
   --<axis>=v        explicit single axis value
   --<axis>=v1,v2    explicit value list
   --<axis>=lo..hi   range using the axis's declared step policy

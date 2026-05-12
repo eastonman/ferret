@@ -1,4 +1,4 @@
-{ stdenv, cmake, ninja, cli11, gtest, sljit, src }:
+{ stdenv, cmake, ninja, cli11, gtest, sljit, spdlog, src }:
 
 stdenv.mkDerivation {
   pname = "ferret";
@@ -6,7 +6,7 @@ stdenv.mkDerivation {
   inherit src;
 
   nativeBuildInputs = [ cmake ninja ];
-  buildInputs = [ cli11 gtest sljit ];
+  buildInputs = [ cli11 gtest sljit spdlog ];
 
   doCheck = true;
   checkPhase = ''

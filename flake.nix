@@ -25,6 +25,7 @@
             pkgs.cli11
             pkgs.gtest
             pkgs.ruff
+            pkgs.spdlog
             sljit
             (pkgs.python3.withPackages (ps: [ ps.matplotlib ps.pandas ]))
           ];

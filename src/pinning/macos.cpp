@@ -10,7 +10,9 @@
 #include <sys/qos.h>
 #include <sys/resource.h>
 
-#include <iostream>
+#include "ferret/log.hpp"
+
+namespace log = ferret::log;
 
 namespace ferret::pinning {
 
@@ -34,9 +36,10 @@ bool pin_to_core(int cpu) {
   if (pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0) != 0) {
     return false;
   }
-  std::cerr << "ferret: warning: per-core pinning unavailable on this OS "
-            << "(thread_policy_set returned " << kr << "); fell back to P-cluster QoS hint, --core=" << cpu
-            << " is informational only\n";
+  log::warn(
+      "per-core pinning unavailable on this OS (thread_policy_set returned {}); "
+      "fell back to P-cluster QoS hint, --core={} is informational only",
+      kr, cpu);
   return true;
 }
 

@@ -17,10 +17,13 @@ extern "C" {
 #include "ferret/benchmark.hpp"
 #include "ferret/cli_axis.hpp"
 #include "ferret/csv.hpp"
+#include "ferret/log.hpp"
 #include "ferret/pinning.hpp"
 #include "ferret/runner.hpp"
 #include "ferret/sweep.hpp"
 #include "ferret/timing.hpp"
+
+namespace log = ferret::log;
 
 namespace {
 
@@ -100,7 +103,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
            const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
   auto bench = ferret::BenchmarkRegistry::create(name);
   if (!bench) {
-    std::cerr << "ferret: unknown benchmark '" << name << "'. Try `ferret list`.\n";
+    log::error("unknown benchmark '{}'. Try `ferret list`.", name);
     return 2;
   }
 
@@ -114,13 +117,13 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
     }
     if (matching == nullptr) {
-      std::cerr << "ferret: unknown axis --" << k << " for benchmark " << name << "\n";
+      log::error("unknown axis --{} for benchmark {}", k, name);
       return 2;
     }
     try {
       overrides[k] = ferret::parse_cli_axis_value(v, *matching);
     } catch (const std::exception& e) {
-      std::cerr << "ferret: invalid value for --" << k << ": " << e.what() << "\n";
+      log::error("invalid value for --{}: {}", k, e.what());
       return 2;
     }
   }
@@ -129,20 +132,20 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   try {
     rows = ferret::sweep::expand(axes, overrides);
   } catch (const std::exception& e) {
-    std::cerr << "ferret: invalid sweep: " << e.what() << "\n";
+    log::error("invalid sweep: {}", e.what());
     return 2;
   }
 
   if (core >= 0) {
     if (!ferret::pinning::pin_to_core(core)) {
-      std::cerr << "ferret: warning: pin_to_core(" << core << ") failed\n";
+      log::warn("pin_to_core({}) failed", core);
     }
   }
   if (!ferret::pinning::boost_priority()) {
-    std::cerr << "ferret: warning: boost_priority failed\n";
+    log::warn("boost_priority failed");
   }
   if (!ferret::pinning::lock_memory()) {
-    std::cerr << "ferret: warning: mlockall failed\n";
+    log::warn("mlockall failed");
   }
 
   std::ofstream ofs;
@@ -150,7 +153,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   if (!out_path.empty()) {
     ofs.open(out_path);
     if (!ofs) {
-      std::cerr << "ferret: cannot open output: " << out_path << "\n";
+      log::error("cannot open output: {}", out_path);
       return 2;
     }
     out_stream = &ofs;
@@ -165,9 +168,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   // inf/nan into output.
   double tpns = ferret::timing::ticks_per_ns();
   if (!std::isfinite(tpns) || !(tpns > 0.0)) {
-    std::cerr << "ferret: ticks_per_ns calibration returned non-finite "
-                 "or non-positive value: "
-              << tpns << "\n";
+    log::error("ticks_per_ns calibration returned non-finite or non-positive value: {}", tpns);
     return 2;
   }
 
@@ -184,8 +185,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       size_t pre_iters = bench->iterations(p);
       size_t pre_sites = bench->sites_per_kernel(p);
       if (pre_iters == 0 || pre_sites == 0) {
-        std::cerr << "ferret: invalid params: yields zero work"
-                  << " (iterations=" << pre_iters << ", sites_per_kernel=" << pre_sites << ")\n";
+        log::error("invalid params: yields zero work (iterations={}, sites_per_kernel={})", pre_iters, pre_sites);
         return 2;
       }
 
@@ -194,7 +194,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
         m.jit_failed = true;
         m.iters = pre_iters;
         m.sites = pre_sites;
-        std::cerr << "ferret: sljit_error on params; emitting empty row\n";
+        log::warn("sljit_error on params; emitting empty row");
       } else {
         auto fn = reinterpret_cast<void (*)()>(kern.code);
         m = ferret::runner::measure(fn, pre_iters, pre_sites, K, warmup);
@@ -202,7 +202,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
       }
     } catch (const std::exception& e) {
       jit_free(kern);
-      std::cerr << "ferret: benchmark error on params: " << e.what() << "\n";
+      log::error("benchmark error on params: {}", e.what());
       return 2;
     }
     buffered.emplace_back(p, m);
@@ -222,6 +222,8 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, char** argv) {
+  log::init();
+
   CLI::App app{"ferret — frontend reverse-engineering toolkit"};
   app.require_subcommand(1);
 
@@ -230,6 +232,13 @@ int main(int argc, char** argv) {
   auto* run_cmd = app.add_subcommand("run", "Run a benchmark");
   std::string name;
   run_cmd->add_option("name", name, "benchmark name")->required();
+
+  // --log-level is attached to run_cmd, not app, because run_cmd uses
+  // allow_extras() and would otherwise swallow it as an --<axis>= override.
+  std::string log_level_str = "warn";
+  run_cmd
+      ->add_option("--log-level", log_level_str, "log level: trace|debug|info|warn|error|critical|off (default warn)")
+      ->check(CLI::IsMember({"trace", "debug", "info", "warn", "warning", "error", "critical", "off"}));
 
   std::string out_path;
   run_cmd->add_option("--out", out_path, "CSV output path (default stdout)");
@@ -250,29 +259,31 @@ int main(int argc, char** argv) {
 
   CLI11_PARSE(app, argc, argv);
 
+  log::set_level(log::parse_level(log_level_str));
+
   if (*list_cmd) {
     return do_list();
   }
 
   if (*run_cmd) {
     if (K < 1) {
-      std::cerr << "ferret: --reps must be >= 1 (got " << K << ")\n";
+      log::error("--reps must be >= 1 (got {})", K);
       return 2;
     }
     if (warmup < 0) {
-      std::cerr << "ferret: --warmup must be >= 0 (got " << warmup << ")\n";
+      log::error("--warmup must be >= 0 (got {})", warmup);
       return 2;
     }
 
     std::map<std::string, std::string> overrides;
     for (const auto& tok : run_cmd->remaining()) {
       if (tok.size() < 3 || tok[0] != '-' || tok[1] != '-') {
-        std::cerr << "ferret: unexpected argument: " << tok << "\n";
+        log::error("unexpected argument: {}", tok);
         return 2;
       }
       auto eq = tok.find('=');
       if (eq == std::string::npos) {
-        std::cerr << "ferret: --axis flags must be --name=value: " << tok << "\n";
+        log::error("--axis flags must be --name=value: {}", tok);
         return 2;
       }
       overrides[tok.substr(2, eq - 2)] = tok.substr(eq + 1);
@@ -283,7 +294,7 @@ int main(int argc, char** argv) {
       try {
         freq_hz = parse_freq(freq_str);
       } catch (const std::exception& e) {
-        std::cerr << "ferret: invalid " << e.what() << "\n";
+        log::error("invalid {}", e.what());
         return 2;
       }
     }
