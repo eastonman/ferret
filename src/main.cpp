@@ -86,7 +86,7 @@ JittedKernel jit_compile(ferret::Benchmark& b, const ferret::Params& p) {
   void* code = sljit_generate_code(c, 0, nullptr);
   size_t code_size = sljit_get_generated_code_size(c);
   sljit_free_compiler(c);
-  return {code, code_size};
+  return {.code = code, .code_size = code_size};
 }
 
 void jit_free(JittedKernel& k) {
