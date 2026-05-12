@@ -33,6 +33,14 @@ class Benchmark {
   virtual size_t sites_per_kernel(const Params& p) const = 0;
   virtual size_t iterations(const Params& p) const = 0;
   virtual void emit_kernel(sljit_compiler* c, const Params& p) = 0;
+
+  // Called once per row after sljit_generate_code, while the compiler is
+  // still alive (label addresses are only valid in that window, and post-
+  // generate patches need sljit_get_executable_offset(c) to find the
+  // writable mapping). Override to validate layout invariants or to
+  // resolve hand-emitted jump displacements. Throw on mismatch; the
+  // runner emits the row as a JIT failure.
+  virtual void verify_layout(sljit_compiler* c) { (void)c; }
 };
 
 class BenchmarkRegistry {

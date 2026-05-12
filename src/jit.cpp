@@ -21,6 +21,13 @@ JittedKernel::JittedKernel(Benchmark& b, const Params& p) {
   void* code = sljit_generate_code(c, 0, nullptr);
   // sljit_get_generated_code_size must be called on the still-live compiler.
   size_t code_size = sljit_get_generated_code_size(c);
+  if (code != nullptr) {
+    // Must run before sljit_free_compiler — label addresses are populated
+    // by sljit_generate_code and freed by sljit_free_compiler, and
+    // benchmarks that patch hand-emitted instructions need
+    // sljit_get_executable_offset(c) to reach the writable mapping.
+    b.verify_layout(c);
+  }
   sljit_free_compiler(c);
   code_ = code;
   code_size_ = code_size;
