@@ -47,14 +47,17 @@ if(SLJIT_INCLUDE_DIR AND SLJIT_LIBRARY)
   )
 else()
   include(FetchContent)
+  # SOURCE_SUBDIR set to a non-existent directory so MakeAvailable
+  # populates the source tree without calling add_subdirectory —
+  # sljit's own CMakeLists builds a test exe with Windows-only link
+  # flags (-Wl,--stack,...) that break Linux/macOS builds.
   FetchContent_Declare(sljit_fetched
     GIT_REPOSITORY https://github.com/zherczeg/sljit.git
     GIT_TAG d9902b1ba06f477dcb89137dae8c8649fb58b7fb
+    SOURCE_SUBDIR  do_not_use_upstream_cmake
   )
   FetchContent_MakeAvailable(sljit_fetched)
-  # sljit's CMakeLists.txt only builds a test exe and uses GNU-ld flags
-  # that fail on macOS, so we don't use it. Instead, we compile
-  # sljit_src/sljitLir.c into a static library ourselves.
+  # We compile sljit_src/sljitLir.c into a static library ourselves.
   add_library(sljit_static STATIC
     "${sljit_fetched_SOURCE_DIR}/sljit_src/sljitLir.c"
   )
