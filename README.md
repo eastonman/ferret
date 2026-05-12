@@ -83,17 +83,30 @@ python3 scripts/plot.py /tmp/btb.csv --out=/tmp/btb.png
 ### CLI flags
 
 ```
-ferret run <name> [options] [--<axis>=value-or-range]
+ferret run <name> [options] [--<axis>=value-or-range] [--<benchmark-option>=v]
   --out=PATH        CSV output (default stdout)
   --core=N          pin measurement thread to core N
   --freq=4.521GHz   running frequency, enables cycle columns
   --reps=K          repetitions per param point (default 7)
   --warmup=W        un-timed calls before measurement (default 1)
   --log-level=L     trace|debug|info|warn|error|critical|off (default warn)
+  --seed=S          RNG seed for benchmarks that randomize (default 1)
   --<axis>=v        explicit single axis value
   --<axis>=v1,v2    explicit value list
   --<axis>=lo..hi   range using the axis's declared step policy
+  --<option>=v      scalar per-benchmark option override (not swept)
 ```
+
+### Per-benchmark options
+
+`direct_branch_footprint` accepts `--sattolo_permute=0|1`. The default
+(`0`) wires each branch to fall through to the next in layout order.
+`--sattolo_permute=1` rewires the jump targets as a uniform random
+Hamiltonian cycle over the same N branches (Sattolo's algorithm, seeded
+by `--seed` mixed with the branch count and spacing). N branches still
+execute per outer-loop iteration, but the executed PC order is
+unpredictable — useful for isolating the BTB contribution from
+sequential-prefetch and I-cache spatial-locality effects.
 
 ## Formatting and linting
 

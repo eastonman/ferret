@@ -46,6 +46,27 @@ TEST(Integration, DirectBranchFootprintProducesNonEmptyRows) {
   EXPECT_EQ(contents.find(",,\n"), std::string::npos);
 }
 
+TEST(Integration, DirectBranchFootprintSattoloPermuteHeaderAndRows) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_btb_sattolo.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run direct_branch_footprint"
+                    " --branches=1,2,4,8 --spacing_bytes=64"
+                    " --sattolo_permute=1 --seed=42"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  // Option + seed appear as columns and every data row is non-empty.
+  EXPECT_NE(contents.find("sattolo_permute"), std::string::npos);
+  EXPECT_NE(contents.find("seed"), std::string::npos);
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 5u);
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
+}
+
 TEST(Integration, DependentChainThroughputProducesOneRow) {
   auto out = std::filesystem::temp_directory_path() / "ferret_freq.csv";
   std::filesystem::remove(out);

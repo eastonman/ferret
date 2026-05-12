@@ -115,9 +115,10 @@ int64_t parse_option_value(const std::string& v) {
   return parsed;
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+// NOLINTBEGIN(readability-function-cognitive-complexity,bugprone-easily-swappable-parameters)
 int do_run(const std::string& name, const std::map<std::string, std::string>& cli_axis_overrides,
-           const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup) {
+           const std::string& out_path, int core, std::optional<double> freq_hz, int K, int warmup, int64_t seed) {
+  // NOLINTEND(readability-function-cognitive-complexity,bugprone-easily-swappable-parameters)
   auto bench = ferret::BenchmarkRegistry::create(name);
   if (!bench) {
     flog::error("unknown benchmark '{}'. Try `ferret list`.", name);
@@ -175,11 +176,12 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
     return 2;
   }
 
-  // Inject non-swept options into every row so they're recorded in CSV.
+  // Inject non-swept options + seed into every row so they're recorded in CSV.
   for (auto& p : rows) {
     for (const auto& [k, v] : option_values) {
       p.set(k, v);
     }
+    p.set("seed", seed);
   }
 
   if (core >= 0) {
@@ -212,6 +214,7 @@ int do_run(const std::string& name, const std::map<std::string, std::string>& cl
   for (const auto& o : options) {
     axis_cols.push_back(o.name);
   }
+  axis_cols.emplace_back("seed");
 
   // tpns is the divisor for every CSV row; non-finite or zero would leak
   // inf/nan into output.
@@ -304,6 +307,9 @@ int main(int argc, char** argv) {
   int warmup = 1;
   run_cmd->add_option("--warmup", warmup, "warmup calls before each measurement (default 1)");
 
+  int64_t seed = 1;
+  run_cmd->add_option("--seed", seed, "RNG seed for benchmarks that randomize (default 1)");
+
   run_cmd->allow_extras();
 
   CLI11_PARSE(app, argc, argv);
@@ -347,7 +353,7 @@ int main(int argc, char** argv) {
         return 2;
       }
     }
-    return do_run(name, overrides, out_path, core, freq_hz, K, warmup);
+    return do_run(name, overrides, out_path, core, freq_hz, K, warmup, seed);
   }
 
   return 0;
