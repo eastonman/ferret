@@ -92,7 +92,7 @@ add_library(ferret_core STATIC
   src/pinning/linux.cpp
   src/pinning/macos.cpp
   src/benchmark_registry.cpp
-  src/output/csv.cpp
+  src/csv.cpp
   src/runner.cpp
   src/run_command.cpp
   src/padding.cpp
