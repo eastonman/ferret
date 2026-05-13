@@ -49,6 +49,11 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+## Documentation
+
+- [`docs/architecture.md`](docs/architecture.md) — codebase overview and module map.
+- [`docs/writing-a-benchmark.md`](docs/writing-a-benchmark.md) — guide for adding a new benchmark.
+
 ## Use
 
 ### List benchmarks
@@ -56,6 +61,16 @@ ctest --test-dir build --output-on-failure
 ```sh
 build/ferret list
 ```
+
+### Benchmarks
+
+Each benchmark probes one frontend structure. Use the table to pick the
+one matching the question you're asking.
+
+| Name                          | Targets                                  | Notes                                                                            |
+|-------------------------------|------------------------------------------|----------------------------------------------------------------------------------|
+| `dependent_chain_throughput`  | running core frequency / 1-IPC baseline  | dependent ADD chain                                                              |
+| `direct_branch_footprint`     | direct-jump BTB capacity                 | N unconditional branches; `--sattolo_permute=1` defeats spatial I-cache prefetch |
 
 ### The two-step cycle workflow
 
