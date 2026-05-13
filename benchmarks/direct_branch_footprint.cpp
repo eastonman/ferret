@@ -95,12 +95,8 @@ struct DirectBranchFootprint : Benchmark {
     auto seed = static_cast<uint64_t>(p.get<int64_t>("seed"));
     size_t iters = iterations(p);
 
-    // Static ISA-level checks — done before touching the compiler so a
-    // bad parameter point produces no partial state. Alignment: AArch64
-    // requires every branch to start on a 4-byte boundary (no-op on
-    // x86_64 where kBranchAlign==1). Minimum size: spacing must hold at
-    // least one branch encoding (see kJumpBytes above); smaller spacing
-    // cannot reach `spacing` bytes per site even with zero padding.
+    // ISA validation before any sljit state changes — bad params produce
+    // no partial compiler state.
     if (spacing < kJumpBytes) {
       throw std::invalid_argument("spacing_bytes=" + std::to_string(spacing) +
                                   " is smaller than the branch encoding (" + std::to_string(kJumpBytes) +

@@ -10,15 +10,10 @@ namespace ferret {
 // runs at exactly 1 cycle per op on any common core (out-of-order or
 // in-order ARM Cortex-A class).
 //
-// Implementation: emit `full_blocks = chain_length / 1024` outer-loop
-// iterations of a 1024-ADD inner block, then a straight-line tail of
-// `chain_length % 1024` ADDs. Total ops per fn() == exactly
-// `chain_length`. The framework sees iterations=1,
-// sites_per_kernel=chain_length, so the per-site metric is ns/op =
-// ns/cycle on a 1 IPC core.
-//
-// For chain_length < UNROLL the loop is skipped entirely and only the
-// straight-line tail runs.
+// Emits one 1024-ADD inner loop body plus a straight-line tail; total
+// ops per fn() == chain_length exactly. With iterations=1 and
+// sites_per_kernel=chain_length the per-site metric is ns/op = ns/cycle
+// on a 1-IPC core. For chain_length < UNROLL only the tail runs.
 struct DependentChainThroughput : Benchmark {
   static constexpr int UNROLL = 1024;
 
