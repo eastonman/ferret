@@ -24,23 +24,54 @@ struct BenchOption {
 
 using BenchOptions = std::vector<BenchOption>;
 
+// Base class for one microbenchmark. Subclasses are constructed via
+// BenchmarkRegistry::create. The runner calls axes() and options() once
+// at startup; then, for every parameter point produced by sweep::expand,
+// it calls sites_per_kernel(), iterations(), and emit_kernel() in that
+// order, JIT-compiles the kernel, and times it via runner::measure.
 class Benchmark {
  public:
   virtual ~Benchmark() = default;
+
+  // Must equal the string passed to FERRET_BENCHMARK.
   virtual std::string name() const = 0;
+
+  // Order is significant — defines CSV column order and the sweep-nesting
+  // (the first axis varies slowest in the output).
   virtual SweepAxes axes() const = 0;
+
+  // Scalar non-swept knobs surfaced as `--<name>=<v>`. Default is {} for
+  // benchmarks with no per-bench options.
   virtual BenchOptions options() const { return {}; }
+
+  // Per-site normalization divisor the runner divides ticks by. Must be
+  // > 0; zero is rejected with exit code 2.
   virtual size_t sites_per_kernel(const Params& p) const = 0;
+
+  // Outer-loop iteration count compiled into the kernel to amortize the
+  // runner's tick-read overhead. Must be > 0.
   virtual size_t iterations(const Params& p) const = 0;
+
+  // Emit the benchmark kernel into `c`. The kernel must end with a
+  // return. Any sljit error set on `c` propagates to
+  // JittedKernel::ok() == false. ISA-level parameter rejections should
+  // `throw std::invalid_argument` *before* mutating `c` (see the
+  // kMinBranchBytes / kBranchAlign validation in
+  // direct_branch_footprint.cpp).
   virtual void emit_kernel(sljit_compiler* c, const Params& p) = 0;
 };
 
+// Static singleton registry. Benchmark subclasses normally register
+// themselves at file scope via the FERRET_BENCHMARK macro; the registry
+// is then queried by `ferret list` and `ferret run`.
 class BenchmarkRegistry {
  public:
   using Factory = std::function<std::unique_ptr<Benchmark>()>;
 
   static void register_benchmark(std::string name, Factory factory);
   static std::unique_ptr<Benchmark> create(const std::string& name);
+
+  // Returns the registered names sorted lexicographically.
   static std::vector<std::string> names();
 };
 
