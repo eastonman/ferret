@@ -81,6 +81,7 @@ endif()
 
 add_library(ferret_core STATIC
   src/axis.cpp
+  src/params.cpp
   src/sweep.cpp
   src/cli_axis.cpp
   src/freq.cpp
