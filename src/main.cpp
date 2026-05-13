@@ -47,8 +47,8 @@ int main(int argc, char** argv) {
     std::string freq_str;
     run_cmd->add_option("--freq", freq_str, "core frequency, e.g. 4.521GHz; enables cycles_per_site columns");
 
-    int K = 7;
-    run_cmd->add_option("--reps", K, "number of timed repetitions per param point (default 7)");
+    int reps = 7;
+    run_cmd->add_option("--reps", reps, "number of timed repetitions per param point (default 7)");
 
     int warmup = 1;
     run_cmd->add_option("--warmup", warmup, "warmup calls before each measurement (default 1)");
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
     }
 
     if (*run_cmd) {
-      if (K < 1) {
-        flog::error("--reps must be >= 1 (got {})", K);
+      if (reps < 1) {
+        flog::error("--reps must be >= 1 (got {})", reps);
         return 2;
       }
       if (warmup < 0) {
@@ -95,7 +95,7 @@ int main(int argc, char** argv) {
       opts.name = name;
       opts.out_path = out_path;
       opts.core = core;
-      opts.reps = K;
+      opts.reps = reps;
       opts.warmup = warmup;
       opts.seed = seed;
       return ferret::run(opts);

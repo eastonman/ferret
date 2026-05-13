@@ -18,12 +18,19 @@ namespace runner {
 
 using KernelFn = void (*)(void);
 
-// Runs `warmup` un-timed calls, then K timed calls. Returns ticks_min,
-// ticks_median over the K samples plus the iters/sites/reps for accounting.
-// iters and sites are not used by measure() to drive iteration count —
-// they are passed through to MeasurementRow purely for normalization
-// downstream.
-MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmup);
+struct MeasureOptions {
+  size_t iters;
+  size_t sites;
+  int reps;
+  int warmup;
+};
+
+// Runs `opts.warmup` un-timed calls, then `opts.reps` timed calls.
+// Returns ticks_min, ticks_median over the timed samples plus the
+// iters/sites/reps fields for accounting. iters and sites are passed
+// through to MeasurementRow purely for normalization downstream — they
+// are not used by measure() to drive iteration count.
+MeasurementRow measure(KernelFn fn, const MeasureOptions& opts);
 
 }  // namespace runner
 }  // namespace ferret

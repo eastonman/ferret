@@ -8,26 +8,25 @@
 
 namespace ferret::runner {
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-MeasurementRow measure(KernelFn fn, size_t iters, size_t sites, int K, int warmup) {
-  if (K <= 0) {
-    throw std::invalid_argument("runner::measure: K (reps) must be >= 1");
+MeasurementRow measure(KernelFn fn, const MeasureOptions& opts) {
+  if (opts.reps <= 0) {
+    throw std::invalid_argument("runner::measure: reps must be >= 1");
   }
-  if (warmup < 0) {
+  if (opts.warmup < 0) {
     throw std::invalid_argument("runner::measure: warmup must be >= 0");
   }
   MeasurementRow row;
-  row.iters = iters;
-  row.sites = sites;
-  row.reps = static_cast<size_t>(K);
+  row.iters = opts.iters;
+  row.sites = opts.sites;
+  row.reps = static_cast<size_t>(opts.reps);
 
-  for (int i = 0; i < warmup; ++i) {
+  for (int i = 0; i < opts.warmup; ++i) {
     fn();
   }
 
   std::vector<uint64_t> samples;
-  samples.reserve(K);
-  for (int i = 0; i < K; ++i) {
+  samples.reserve(opts.reps);
+  for (int i = 0; i < opts.reps; ++i) {
     uint64_t t0 = timing::arch_now_ticks();
     fn();
     uint64_t t1 = timing::arch_now_ticks();

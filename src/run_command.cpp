@@ -147,7 +147,7 @@ std::optional<std::vector<MeasuredRow>> measure_all(Benchmark& bench, const std:
         flog::warn("sljit_error on params; emitting empty row");
       } else {
         flog::info("jit kernel: {} bytes", kern.code_size());
-        m = runner::measure(kern.fn(), pre_iters, pre_sites, reps, warmup);
+        m = runner::measure(kern.fn(), {.iters = pre_iters, .sites = pre_sites, .reps = reps, .warmup = warmup});
       }
     } catch (const std::exception& e) {
       flog::error("benchmark error on params: {}", e.what());
