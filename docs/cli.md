@@ -23,15 +23,17 @@ ferret run <name> [options] [--<axis>=value-or-range] [--<benchmark-option>=v]
 Axes are sweep dimensions. Each benchmark declares its axes; the
 runner produces one CSV row per cartesian-product point.
 
-| form              | meaning                                          |
-| ----------------- | ------------------------------------------------ |
-| `--<axis>=v`      | scalar — a single point on the axis              |
-| `--<axis>=v1,v2`  | explicit list — sweeps the listed values         |
-| `--<axis>=lo..hi` | range — uses the axis's declared step policy     |
+| form                | meaning                                                    |
+| ------------------- | ---------------------------------------------------------- |
+| `--<axis>=v`        | scalar — a single point on the axis                        |
+| `--<axis>=v1,v2`    | explicit list — sweeps the listed values                   |
+| `--<axis>=lo..hi`   | range — uses the axis's declared step policy               |
+| `--<axis>=lo..hi@k` | `geom_range` axes only: override samples-per-octave to `k` |
 
 The step policy is set by the axis declaration: `Axis::range` steps
-by 1, `Axis::log2_range` steps by powers of two, `Axis::values` is
-list-only.
+by 1, `Axis::log2_range` steps by powers of two, `Axis::geom_range`
+steps geometrically with `k` samples per octave (`k=1` is identical
+to `log2_range`), `Axis::values` is list-only.
 
 ## Options vs axes
 

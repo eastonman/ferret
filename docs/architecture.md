@@ -26,8 +26,8 @@ main.cpp (CLI11 wiring)
 Every public header lives under `include/ferret/`. The list is
 alphabetical; each line is one sentence on responsibility.
 
-- `axis.hpp` — declarative parameter axis (Range / Log2Range / Values)
-  used by benchmarks to describe what to sweep.
+- `axis.hpp` — declarative parameter axis (Range / Log2Range /
+  GeomRange / Values) used by benchmarks to describe what to sweep.
 - `benchmark.hpp` — base class benchmark authors subclass, plus the
   registry and registration macro.
 - `cli_axis.hpp` — parses CLI values like `1..32768`, `16,32,64`, or

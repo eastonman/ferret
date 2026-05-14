@@ -13,8 +13,12 @@ registers itself at file scope. The runner does the rest.
 - **`axes()`** — returns the swept axes. Order is significant: the
   first axis varies slowest in the CSV output and the first column to
   the right of `benchmark` is the first axis. Use
-  `Axis::range(...)`, `Axis::log2_range(...)`, or
+  `Axis::range(...)`, `Axis::log2_range(...)`,
+  `Axis::geom_range(name, lo, hi, samples_per_octave)`, or
   `Axis::values(...)` (declared in `include/ferret/axis.hpp`).
+  `geom_range` is `log2_range` when `samples_per_octave == 1`; pick
+  a larger `k` when the capacity cliff under test sits between two
+  adjacent powers of two and you want denser default sampling.
 - **`options()`** — returns scalar non-swept knobs. Each appears as a
   `--<name>=<v>` CLI flag and is recorded in the CSV one column after
   the axes. Default to `{}` if your benchmark has no per-bench options.
@@ -94,7 +98,7 @@ plus ISA-level pre-flight validation.
 struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] SweepAxes axes() const override {
     return {
-        Axis::log2_range("branches", 1, 1 << 15),
+        Axis::geom_range("branches", 1, 1 << 15, /*samples_per_octave=*/1),
         Axis::log2_range("spacing_bytes", 16, 128),
     };
   }
@@ -119,9 +123,11 @@ struct DirectBranchFootprint : Benchmark {
 
 Key idioms:
 
-- **Two `log2_range` axes** — `branches=1..32768` expands to
-  `{1, 2, 4, 8, ..., 32768}`; `spacing_bytes=16..128` to
-  `{16, 32, 64, 128}`. The framework takes the cartesian product.
+- **A `geom_range` and a `log2_range` axis** — `branches=1..32768`
+  expands to `{1, 2, 4, 8, ..., 32768}` (with `samples_per_octave=1`,
+  identical to `log2_range`; pass `--branches=lo..hi@k` to densify);
+  `spacing_bytes=16..128` to `{16, 32, 64, 128}`. The framework takes
+  the cartesian product.
 - **`sattolo_permute` option** — surfaced as `--sattolo_permute=0|1`.
   Stored in every CSV row, optionally rewires branch targets as a
   uniform random Hamiltonian cycle (see `permute.hpp`).
