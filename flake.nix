@@ -27,7 +27,7 @@
             pkgs.ruff
             pkgs.spdlog
             sljit
-            (pkgs.python3.withPackages (ps: [ ps.matplotlib ps.pandas ]))
+            (pkgs.python3.withPackages (ps: [ ps.matplotlib ps.pandas ps.pytest ]))
           ];
         };
 
