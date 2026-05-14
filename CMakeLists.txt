@@ -5,6 +5,25 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# --- Warning policy ---
+# Scoped to ferret's own targets via the ferret_warnings INTERFACE library;
+# vendored deps (gtest/CLI11/spdlog/sljit) are deliberately excluded so a
+# warning regression upstream cannot fail our build. FERRET_WERROR is ON
+# by default so CI catches regressions without extra workflow plumbing;
+# turn it OFF (-DFERRET_WERROR=OFF) for a one-off local build.
+option(FERRET_WERROR "Treat warnings as errors for ferret targets" ON)
+
+add_library(ferret_warnings INTERFACE)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+  target_compile_options(ferret_warnings INTERFACE
+    -Wall -Wextra -Wpedantic
+    $<$<BOOL:${FERRET_WERROR}>:-Werror>)
+elseif(MSVC)
+  target_compile_options(ferret_warnings INTERFACE
+    /W4
+    $<$<BOOL:${FERRET_WERROR}>:/WX>)
+endif()
+
 # --- Sanitizers ---
 # Off by default — production and timing-sensitive runs are unchanged.
 # Flags are added via add_compile_options / add_link_options before
@@ -136,6 +155,7 @@ add_library(ferret_core STATIC
 )
 target_include_directories(ferret_core PUBLIC include)
 target_link_libraries(ferret_core PUBLIC sljit::sljit spdlog::spdlog)
+target_link_libraries(ferret_core PRIVATE ferret_warnings)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
 
 add_executable(ferret
@@ -147,6 +167,7 @@ target_link_libraries(ferret PRIVATE
   ferret_core
   CLI11::CLI11
   sljit::sljit
+  ferret_warnings
 )
 
 install(TARGETS ferret RUNTIME DESTINATION bin)

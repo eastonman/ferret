@@ -14,6 +14,7 @@ add_executable(test_params_axis test_params_axis.cpp)
 target_link_libraries(test_params_axis PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_params_axis)
 
@@ -21,6 +22,7 @@ add_executable(test_sweep test_sweep.cpp)
 target_link_libraries(test_sweep PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_sweep)
 
@@ -28,6 +30,7 @@ add_executable(test_cli_axis test_cli_axis.cpp)
 target_link_libraries(test_cli_axis PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_cli_axis)
 
@@ -35,6 +38,7 @@ add_executable(test_timing test_timing.cpp)
 target_link_libraries(test_timing PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_timing)
 
@@ -42,6 +46,7 @@ add_executable(test_pinning test_pinning.cpp)
 target_link_libraries(test_pinning PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_pinning)
 
@@ -50,6 +55,7 @@ target_link_libraries(test_benchmark_registry PRIVATE
   ferret_core
   sljit::sljit
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_benchmark_registry)
 
@@ -57,6 +63,7 @@ add_executable(test_csv test_csv.cpp)
 target_link_libraries(test_csv PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_csv)
 
@@ -64,6 +71,7 @@ add_executable(test_runner test_runner.cpp)
 target_link_libraries(test_runner PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_runner)
 
@@ -71,6 +79,7 @@ add_executable(test_padding test_padding.cpp)
 target_link_libraries(test_padding PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_padding)
 
@@ -78,6 +87,7 @@ add_executable(test_permute test_permute.cpp)
 target_link_libraries(test_permute PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_permute)
 
@@ -86,6 +96,7 @@ target_link_libraries(test_jit PRIVATE
   ferret_core
   sljit::sljit
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_jit)
 
@@ -93,6 +104,7 @@ add_executable(test_freq test_freq.cpp)
 target_link_libraries(test_freq PRIVATE
   ferret_core
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_freq)
 
@@ -103,6 +115,7 @@ target_compile_definitions(test_integration PRIVATE
 add_dependencies(test_integration ferret)
 target_link_libraries(test_integration PRIVATE
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 # Per-test wall-clock timeout enforced by CTest itself (portable across
 # Linux/macOS/BSD without depending on a `timeout` binary). 30 s is much
