@@ -12,7 +12,7 @@
 
 #include "ferret/log.hpp"
 
-namespace log = ferret::log;
+namespace flog = ferret::log;
 
 namespace ferret::pinning {
 
@@ -36,7 +36,7 @@ bool pin_to_core(int cpu) {
   if (pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0) != 0) {
     return false;
   }
-  log::warn(
+  flog::warn(
       "per-core pinning unavailable on this OS (thread_policy_set returned {}); "
       "fell back to P-cluster QoS hint, --core={} is informational only",
       kr, cpu);

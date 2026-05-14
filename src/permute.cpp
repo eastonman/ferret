@@ -6,7 +6,7 @@
 
 namespace ferret {
 
-// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)  // convertible types on this platform
 std::vector<size_t> sattolo_cycle(size_t n, uint64_t seed) {
   std::vector<size_t> next(n);
   std::iota(next.begin(), next.end(), size_t{0});

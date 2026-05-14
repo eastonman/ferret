@@ -13,8 +13,7 @@ void noop_kernel() {}
 }  // namespace
 
 TEST(Runner, MinOfKChoosesShortestSample) {
-  MeasurementRow m = runner::measure(slow_kernel_100us, /*iters=*/1,
-                                     /*sites=*/1, /*K=*/5, /*warmup=*/1);
+  MeasurementRow m = runner::measure(slow_kernel_100us, {.iters = 1, .sites = 1, .reps = 5, .warmup = 1});
   EXPECT_GT(m.ticks_min, 0u);
   EXPECT_GE(m.ticks_median, m.ticks_min);
   EXPECT_EQ(m.iters, 1u);
@@ -24,7 +23,7 @@ TEST(Runner, MinOfKChoosesShortestSample) {
 }
 
 TEST(Runner, NoopKernelHasZeroOrTinyMin) {
-  MeasurementRow m = runner::measure(noop_kernel, 1, 1, 5, 1);
+  MeasurementRow m = runner::measure(noop_kernel, {.iters = 1, .sites = 1, .reps = 5, .warmup = 1});
   EXPECT_FALSE(m.jit_failed);
   EXPECT_GE(m.ticks_median, m.ticks_min);
 }
@@ -33,15 +32,15 @@ TEST(Runner, KernelInvokedAtLeastWarmupPlusKTimes) {
   static int counter;
   counter = 0;
   auto count = []() { ++counter; };
-  runner::measure(count, 1, 1, /*K=*/4, /*warmup=*/2);
+  runner::measure(count, {.iters = 1, .sites = 1, .reps = 4, .warmup = 2});
   EXPECT_EQ(counter, 2 + 4);
 }
 
 TEST(Runner, RejectsNonPositiveK) {
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/0, /*warmup=*/1), std::invalid_argument);
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/-1, /*warmup=*/1), std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, {.iters = 1, .sites = 1, .reps = 0, .warmup = 1}), std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, {.iters = 1, .sites = 1, .reps = -1, .warmup = 1}), std::invalid_argument);
 }
 
 TEST(Runner, RejectsNegativeWarmup) {
-  EXPECT_THROW(runner::measure(noop_kernel, 1, 1, /*K=*/3, /*warmup=*/-1), std::invalid_argument);
+  EXPECT_THROW(runner::measure(noop_kernel, {.iters = 1, .sites = 1, .reps = 3, .warmup = -1}), std::invalid_argument);
 }
