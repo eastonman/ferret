@@ -151,7 +151,9 @@ sequential-prefetch and I-cache spatial-locality effects.
 
 `nested_call_depth` — N nested `call`/`ret` pairs at distinct PCs with
 K = 8 shared-callee dispatch reads from a per-iteration path table.
-Sweep `--depth=1..64` to reveal the cliff at the RAS capacity.
+Sweep `--depth=1..64` to reveal the cliff at the RAS capacity. See
+[`docs/benchmarks/nested_call_depth.md`](docs/benchmarks/nested_call_depth.md)
+for the full workflow, options, and example output.
 
 ## Formatting and linting
 
