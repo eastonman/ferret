@@ -67,6 +67,39 @@ TEST(Integration, DirectBranchFootprintSattoloPermuteHeaderAndRows) {
   EXPECT_EQ(contents.find(",,"), std::string::npos);
 }
 
+TEST(Integration, DirectBranchFootprintGeomRangeNonPow2Sweep) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_btb_geom.csv";
+  std::filesystem::remove(out);
+  // Branch range kept small. Larger ranges (e.g., 1024..4096@4) blow up
+  // sljit on x86_64 because emit_nops emits one op_custom per byte of
+  // padding (src/padding.cpp:11-15) — at spacing=64 that is 59 ops per
+  // site, and the per-kernel op count grows past what sljit's metadata
+  // tracking handles. Fixing emit_nops to batch the NOPs is a separate
+  // issue. The values picked here exercise non-pow2 expansion and the
+  // CLI @k path end-to-end without tripping the underlying limit.
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run direct_branch_footprint"
+                    " --branches=64..256@2 --spacing_bytes=64"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  // Header + 5 data rows: expand_geom_range(64, 256, 2) lands on
+  // {64, 91, 128, 181, 256}; hi=256 is on the natural sequence so no
+  // hi-forcing.
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 6u);
+  // No empty cells.
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
+  // Spot-check two non-pow2 values appear as row substrings of the form
+  // ",<branches>,<spacing_bytes>," — column 2 is branches, column 3
+  // spacing_bytes by ferret convention (first axis is slowest-varying).
+  EXPECT_NE(contents.find(",91,64,"), std::string::npos);
+  EXPECT_NE(contents.find(",181,64,"), std::string::npos);
+}
+
 TEST(Integration, DependentChainThroughputProducesOneRow) {
   auto out = std::filesystem::temp_directory_path() / "ferret_freq.csv";
   std::filesystem::remove(out);

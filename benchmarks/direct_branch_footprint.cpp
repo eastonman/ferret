@@ -73,7 +73,7 @@ struct DirectBranchFootprint : Benchmark {
 
   [[nodiscard]] SweepAxes axes() const override {
     return {
-        Axis::log2_range("branches", 1, 1 << 15),
+        Axis::geom_range("branches", 1, 1 << 15, /*samples_per_octave=*/1),
         Axis::log2_range("spacing_bytes", 16, 128),
     };
   }
