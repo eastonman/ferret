@@ -65,7 +65,8 @@ Annotated:
 
 | flag                       | meaning                                                                |
 | -------------------------- | ---------------------------------------------------------------------- |
-| `--branches=A..B`          | Log₂ sweep, e.g. `1..32768`. Site count.                               |
+| `--branches=A..B`          | Geometric sweep, default `k=1` (same as log₂), e.g. `1..32768`.        |
+| `--branches=A..B@k`        | Geometric sweep with `k` samples per octave, e.g. `1024..4096@4`.      |
 | `--branches=v1,v2,…`       | Explicit list.                                                         |
 | `--spacing_bytes=A..B`     | Log₂ sweep over `{16, 32, 64, 128}`. Site stride.                      |
 | `--sattolo_permute=0\|1`   | See above. Default `0`.                                                |
