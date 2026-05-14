@@ -18,5 +18,5 @@ if [ "${#CXX_FILES[@]}" -gt 0 ]; then
 fi
 
 # Python: format then autofix lint findings.
-ruff format scripts/
-ruff check --fix scripts/
+ruff format scripts/ tests/python/
+ruff check --fix scripts/ tests/python/
