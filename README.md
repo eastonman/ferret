@@ -149,6 +149,10 @@ execute per outer-loop iteration, but the executed PC order is
 unpredictable — useful for isolating the BTB contribution from
 sequential-prefetch and I-cache spatial-locality effects.
 
+`nested_call_depth` — N nested `call`/`ret` pairs at distinct PCs with
+K = 8 shared-callee dispatch reads from a per-iteration path table.
+Sweep `--depth=1..64` to reveal the cliff at the RAS capacity.
+
 ## Formatting and linting
 
 Formatters and linters run in CI and must pass before merging.
