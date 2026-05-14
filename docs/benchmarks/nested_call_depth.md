@@ -41,7 +41,7 @@ python3 scripts/plot.py /tmp/ras.csv --out=/tmp/ras.png
 | --------------------- | -------------------------------------------------------- |
 | `--depth=A..B`        | Sweep nesting depth from A to B inclusive, step 1.       |
 | `--depth=v1,v2,…`     | Sweep an explicit list of depths.                        |
-| `--path_table_rows=N` | Per-iteration dispatch table row count. Default 4096. Must be a power of two ≥ 2. Bigger ⇒ longer period before the dispatch pattern repeats; also bigger memory footprint (`N × (depth+1)` bytes). |
+| `--path_table_rows=N` | Per-iteration dispatch table row count. Default 256. Must be a power of two ≥ 2. Bigger ⇒ longer dispatch-pattern period (harder for indirect predictors to learn) but bigger memory footprint (`N × (depth+1)` bytes); once the table exceeds L1D, per-call cost inflates progressively with depth and the pre-cliff curve becomes a measurement of cache pressure rather than RAS pressure. The default keeps the table at ≤ 16 KB through depth 64 so it stays in L1D on every shipping core. Raise it if you suspect a host with very deep indirect-prediction history (TAGE > 8 bits). |
 | `--freq=…`            | Standard ferret flag. Enables `cycles_per_site_*` columns. |
 | `--core=…`            | Standard ferret pinning flag. Pin probe and benchmark to the same core. |
 | `--reps=K`            | Standard. Run K timed repetitions per param point.       |
@@ -54,24 +54,34 @@ Below the RAS cliff: per-call cost ≈ a few cycles (CALL + RET + dispatch
 load + branch). Above the cliff: per-call cost steps up by the
 ret-mispredict penalty.
 
-Real example, Apple Silicon P-core via the `--core=3` (informational)
-fallback path, `--depth=1..64`:
+Real example, Apple Silicon P-core, `--depth=1..64` at the default
+`path_table_rows=256`:
 
 ```
 depth   cycles/site
-   1     13.4    ← outer-loop amortization noise at very low N
-   4      8.2    ← floor: pure CALL+RET cost (~2 cycles each)
-   8     10.8
-  16     20.1    ← gradual rise begins (RAS pressure)
-  32     24.0    ← partial-miss plateau
-  60     46.4    ← hard cliff (deepest predictor exhausted)
-  64     45.5    ← post-cliff plateau
+   1     11.4    ← outer-loop overhead amortized over only 2 sites
+   4      7.4    ← floor: CALL + RET + dispatch (~7 cycles/pair)
+   8      7.1
+  16      8.3
+  32      8.7    ← flat all the way to the cliff
+  48      8.6
+  58     10.2
+  60     28.3    ← cliff: rets miss RAS, fall back to indirect predictor
+  64     27.8    ← post-cliff plateau
 ```
 
-Apple Silicon shows a layered structure — a soft rise from depth ~8 and a
-sharp cliff around depth 60 — rather than the single sharp step common on
-Intel/AMD. Other shipping cores: Cortex-A78 RAS ≈ 24, Sunny/Golden Cove
-≈ 16–32, Zen4 ≈ 32; expect the cliff at or near the documented capacity.
+The pre-cliff floor sits at ~7 cycles per call/ret pair on this core; the
+cliff at depth 60 is the RAS capacity. Other shipping cores typically
+show the cliff at the documented RAS capacity (Cortex-A78 ≈ 24,
+Sunny/Golden Cove ≈ 16–32, Zen4 ≈ 32). Cliff height is the
+ret-mispredict penalty on that core.
+
+> ⚠️ **Path-table cache pressure.** At depths above ~32 with the original
+> default of `path_table_rows=4096`, the dispatch table no longer fits in
+> L1D and per-call cost inflates progressively *before* the RAS cliff —
+> producing a misleading "gradual rise" that is actually L1D miss
+> latency, not RAS pressure. Keep `path_table_rows` at the default unless
+> you have a specific reason to raise it.
 
 ## Caveats specific to this benchmark
 
@@ -91,7 +101,7 @@ Intel/AMD. Other shipping cores: Cortex-A78 RAS ≈ 24, Sunny/Golden Cove
 - **Iteration budget vs. depth.** Per-call cost is reported per site;
   default `iterations()` aims for roughly 10 ms of work per measurement
   irrespective of depth. The path-table period (`path_table_rows`)
-  defaults to 4096 — long enough that no shipping predictor's history
+  defaults to 256 — long enough that no shipping predictor's history
   can memorize the dispatch pattern. Raise it if you suspect a host
   with unusually large indirect prediction history.
 

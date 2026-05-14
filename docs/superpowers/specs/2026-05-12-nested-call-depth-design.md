@@ -141,7 +141,7 @@ is a bare ret and does not dispatch.)
 
 Each ret PC has K = 8 distinct correct return targets, drawn uniformly
 across outer-loop iterations from a table whose period (`ROWS`,
-default 4096 — see §5) far exceeds the history any shipping indirect
+default 256 — see §5) far exceeds the history any shipping indirect
 predictor can fit. So:
 
 - A simple last-target-per-PC indirect predictor mispredicts ~7/8 of
@@ -161,14 +161,22 @@ mispredict. The cliff appears.
 - N + 1 distinct body PCs and 8(N + 1) distinct call-site PCs grow
   with N. For N ≤ 64 the total static code is a few KB — well within
   L1I and BTB-direct on every shipping core, so these are negligible.
-- The path-table load is one byte per body. For ROWS = 4096 and
-  N = 64, the table is 260 KB and easily fits in L2; reads are
-  sequential across consecutive bodies (good prefetch), and the row
-  changes per outer iteration so L1D pressure stays at one row
-  (~64 B for N = 64). No measurable confounding expected.
+- **Path-table cache pressure** (the one real confounder). The table
+  is `ROWS × (N+1)` bytes. Each outer iter reads one row's worth, then
+  moves to the next row, so over the course of a measurement we cycle
+  through the entire table linearly. Once total size exceeds L1D, each
+  iter incurs L1D miss latency on the row load — and that latency
+  scales with depth because the rows themselves grow with N. Empirical
+  result on Apple Silicon: with ROWS = 4096, pre-cliff per-call cost
+  rises from ~8 cycles at N=4 to ~28 cycles at N=58 *purely from
+  cache pressure*, masking the genuine RAS cliff. With ROWS = 256 (≤
+  16 KB at N=64, fits L1D on every shipping core) the pre-cliff curve
+  is genuinely flat. The default is set at the smallest value that
+  still gives enough dispatch-pattern period to defeat history-based
+  indirect predictors.
 
-If real measurements ever show artifacts attributable to these, we
-can add a body-spacing axis in a follow-up, mirroring
+If real measurements ever show artifacts attributable to body PC
+layout, we can add a body-spacing axis in a follow-up, mirroring
 `direct_branch_footprint`.
 
 ## 5. Sweep axis and benchmark option
@@ -189,12 +197,14 @@ RAS (~32 on Zen4) plus headroom for the post-cliff plateau.
 
 | Option | Type | Default | Meaning |
 |--------|------|---------|---------|
-| `path_table_rows` | `int64_t`, power of 2 | 4096 | Number of rows in the per-iter dispatch table. Larger ⇒ longer period ⇒ harder for history-based predictors to learn; also larger memory footprint. |
+| `path_table_rows` | `int64_t`, power of 2 | 256 | Number of rows in the per-iter dispatch table. Larger ⇒ longer dispatch-pattern period ⇒ harder for history-based predictors to learn; also larger memory footprint. Once `rows × (depth+1)` exceeds L1D the measurement is dominated by cache pressure rather than predictor behavior (see §4.5). |
 
-The default 4096 rows × (N+1) bytes ≈ 260 KB at N=64 — well above any
-shipping predictor's history depth, well below L2 on any modern core.
-The option exists so the user can stress-test the choice on cores
-with very large indirect-prediction structures.
+The default 256 rows × (N+1) bytes ≤ 16 KB at N=64 — comfortably
+inside L1D on every shipping core, and an 8-bit dispatch-pattern
+period is past the global-history depth of every indirect predictor
+we expect to encounter. The option exists so the user can stress-test
+the choice on cores with very deep indirect-prediction history (TAGE
+> 8 bits), accepting cache pressure as a trade-off.
 
 Pre-flight check: `path_table_rows` must be a power of two and ≥ 2.
 Violations raise `std::invalid_argument` before any compiler state is
@@ -212,7 +222,7 @@ struct NestedCallDepth : Benchmark {
   }
 
   BenchOptions options() const override {
-    return { BenchOption{ .name = "path_table_rows", .default_value = 4096 } };
+    return { BenchOption{ .name = "path_table_rows", .default_value = 256 } };
   }
 
   size_t sites_per_kernel(const Params& p) const override {
@@ -266,7 +276,7 @@ A new `tests/test_nested_call_depth.cpp`:
 
 - Construct the benchmark from the registry, verify
   `name() == "nested_call_depth"`, axes contain one `depth` axis,
-  options contain one `path_table_rows` option with default 4096.
+  options contain one `path_table_rows` option with default 256.
 - Verify pre-flight rejects `path_table_rows = 3` (not a power of 2)
   and `depth = 0`.
 

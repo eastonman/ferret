@@ -151,7 +151,12 @@ struct NestedCallDepth : Benchmark {
   [[nodiscard]] SweepAxes axes() const override { return {Axis::range("depth", 1, 64)}; }
 
   [[nodiscard]] BenchOptions options() const override {
-    return {BenchOption{.name = "path_table_rows", .default_value = 4096}};
+    // 256 rows × (depth+1) bytes ≤ ~16 KB at the deepest swept depth, so the
+    // path table stays in L1D on every shipping core. 8 bits of dispatch-
+    // pattern period is past the global-history depth of any indirect
+    // predictor we expect to encounter. Raise this if you suspect a host
+    // with much deeper indirect-prediction history.
+    return {BenchOption{.name = "path_table_rows", .default_value = 256}};
   }
 
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("depth") + 1; }
