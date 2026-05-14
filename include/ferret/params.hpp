@@ -13,6 +13,8 @@ namespace ferret {
 // because every benchmark axis is integral.
 class Params {
  public:
+  // First insertion appends to the iteration order returned by keys();
+  // subsequent overwrites update the value without reordering.
   void set(const std::string& key, int64_t value);
 
   // Negative int64 would silently wrap when T is unsigned; reject explicitly.
