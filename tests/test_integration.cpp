@@ -478,12 +478,14 @@ TEST(Integration, FreqProbeExactOpCountSanity) {
 }
 
 TEST(Integration, NestedCallDepthRejectsBadPathTableRows) {
+  // path_table_rows is only validated for variant=2 (the path-table kernel).
+  // variants 0/1 ignore it, so we explicitly select variant 2 here.
   for (const char* val : {"3", "5", "0", "1"}) {
     auto err = std::filesystem::temp_directory_path() / ("ferret_ncd_bad_rows_" + std::string(val) + ".txt");
     std::filesystem::remove(err);
     std::string cmd = std::string(FERRET_BINARY) +
                       " run nested_call_depth"
-                      " --depth=2 --path_table_rows=" +
+                      " --depth=2 --variant=2 --path_table_rows=" +
                       val +
                       " --reps=2 --warmup=1"
                       " 2> " +
@@ -493,6 +495,43 @@ TEST(Integration, NestedCallDepthRejectsBadPathTableRows) {
     std::string err_contents = slurp(err.string());
     EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   }
+}
+
+TEST(Integration, NestedCallDepthRejectsInvalidVariant) {
+  for (const char* val : {"-1", "3", "9"}) {
+    auto err = std::filesystem::temp_directory_path() / ("ferret_ncd_bad_variant_" + std::string(val) + ".txt");
+    std::filesystem::remove(err);
+    std::string cmd = std::string(FERRET_BINARY) +
+                      " run nested_call_depth"
+                      " --depth=2 --variant=" +
+                      val +
+                      " --reps=2 --warmup=1"
+                      " 2> " +
+                      err.string();
+    int rc = actual_exit_code(std::system(cmd.c_str()));
+    EXPECT_EQ(rc, 2) << "variant=" << val << ": expected exit 2";
+    std::string err_contents = slurp(err.string());
+    EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  }
+}
+
+TEST(Integration, NestedCallDepthAllVariantsProduceRows) {
+  // Sweeps depth × variant in one ferret invocation — 4 depths × 3 variants
+  // = 12 data rows plus 1 header. Also exercises the variant axis's list
+  // syntax so a regression in CLI parsing fails this test.
+  auto out = std::filesystem::temp_directory_path() / "ferret_ncd_all_variants.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=1,2,4,8 --variant=0,1,2"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 13u);
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
 }
 
 TEST(Integration, NestedCallDepthRejectsZeroDepth) {

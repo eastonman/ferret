@@ -149,9 +149,12 @@ execute per outer-loop iteration, but the executed PC order is
 unpredictable — useful for isolating the BTB contribution from
 sequential-prefetch and I-cache spatial-locality effects.
 
-`nested_call_depth` — N nested `call`/`ret` pairs at distinct PCs with
-K = 8 shared-callee dispatch reads from a per-iteration path table.
-Sweep `--depth=1..64` to reveal the cliff at the RAS capacity. See
+`nested_call_depth` — N nested `call`/`ret` pairs that reveal the RAS
+capacity as a cliff in per-call cost. Three kernel variants are
+selectable via `--variant`: 0 = single call site (control), 1 = K=2
+counter-bit dispatch (default, near-ideal CALL+RET floor), 2 = K=8
+path-table dispatch (most robust against history-rich indirect
+predictors). Sweep `--depth=1..64`. See
 [`docs/benchmarks/nested_call_depth.md`](docs/benchmarks/nested_call_depth.md)
 for the full workflow, options, and example output.
 
