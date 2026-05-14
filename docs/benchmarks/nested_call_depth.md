@@ -6,6 +6,47 @@ N ≤ RAS capacity; once N exceeds it, the oldest return addresses are
 evicted, those rets miss RAS, and per-call cost steps up to a higher
 plateau. The cliff position is the RAS capacity.
 
+## Kernel structure
+
+Variant 1 (default) is the canonical picture; variants 0 and 2
+differ in fan-out per body. All three emit `depth + 1` functions
+(`chain_main` + `BODY_1`…`BODY_depth`), with `chain_main` running
+the outer loop and calling `BODY_depth`. Each `BODY_d` calls
+`BODY_{d-1}` through one or more dispatch-selected sites. `BODY_0`
+is a bare RET.
+
+```
+ chain_main:                    BODY_d  (variant 1, 1 ≤ d ≤ depth):
+ ┌─────────────────────────┐    ┌──────────────────────────┐
+ │ MOV  S0, iters          │    │ AND  S0, 1               │
+ │ loop_top:               │    │ JZ   site_b              │
+ │   CALL BODY_depth       │    │ site_a: CALL BODY_{d-1}  │ ──┐
+ │   SUB  S0,S0,1; JNZ ↩  │    │ JMP  done                │   │
+ │ RET                     │    │ site_b: CALL BODY_{d-1}  │ ──┤
+ └─────────────────────────┘    │ done: RET                │   │
+                                └──────────────────────────┘   │
+   S0 = iteration counter,                                     │
+   threaded through the chain                                  │
+   in a callee-saved register                              ◀───┘
+                                                          (next deeper body
+                                                           returns through here)
+ BODY_0:
+ ┌─────────────────────────┐
+ │ RET                     │  ← deepest level; pops the last return addr
+ └─────────────────────────┘
+```
+
+Per-body fan-out is what `--variant` selects:
+
+- **`--variant=0`** — one CALL site per body, no dispatch. Direct
+  RET, single target per RET PC.
+- **`--variant=1`** — two CALL sites per body, one CB dispatching
+  on bit 0 of `S0` (perfectly predicted alternation).
+- **`--variant=2`** — eight CALL sites per body, three CBs forming
+  a binary tree dispatching on bits of a byte loaded from
+  `path_table[row][i]`, where `row = S0 & (path_table_rows − 1)`
+  rotates per outer iteration.
+
 ## The three kernel variants
 
 Selectable via `--variant`. All three emit the same depth-N nested
@@ -75,36 +116,12 @@ for the rationale.
 [cnc]: https://github.com/ChipsandCheese/Microbenchmarks/blob/master/AsmGen/tests/ReturnStackTest.cs
 [jiegec]: https://github.com/jiegec/cpu-micro-benchmarks/blob/master/src/ras_size_gen.cpp
 
-## The two-step workflow
-
-ferret reports per-call cost in **CPU cycles** when you supply the running
-core frequency, and in nanoseconds otherwise. Frequency probing is a
-separate step against the same core; see the project README for the
-general protocol.
-
-```sh
-# Step 1: probe the running frequency on the core you'll measure on.
-build/ferret run dependent_chain_throughput --core=3 --out=/tmp/freq.csv
-python3 scripts/freq.py /tmp/freq.csv
-# → estimated_freq=4.490GHz
-
-# Step 2: sweep depth × variant on the same core, with --freq. Producing
-# all three variants in one CSV lets the plot script overlay them as
-# three series on the same figure.
-build/ferret run nested_call_depth --core=3 \
-    --depth=1..64 --variant=0,1,2 --freq=4.490GHz \
-    --reps=7 --warmup=2 \
-    --out=/tmp/ras.csv
-
-# Step 3: plot — depth on X, one curve per variant.
-python3 scripts/plot.py /tmp/ras.csv --out=/tmp/ras.png
-```
-
-`variant` is a sweep axis (not a scalar option), so you can run any
-subset or all of them in a single invocation. Omitting `--variant` runs
-just the default (variant 1).
-
 ## CLI surface
+
+Global flags (`--core`, `--freq`, `--reps`, `--warmup`, `--out`,
+`--log-level`, `--seed`) are documented in [`../cli.md`](../cli.md);
+the table below lists only the axes and options specific to this
+benchmark.
 
 | flag                  | meaning                                                  |
 | --------------------- | -------------------------------------------------------- |
@@ -112,11 +129,7 @@ just the default (variant 1).
 | `--depth=v1,v2,…`     | Sweep an explicit list of depths.                        |
 | `--variant=0\|1\|2`   | Kernel construction (default 1). See the variants section above. |
 | `--path_table_rows=N` | Used **only by variant 2**. Per-iteration dispatch table row count, default 256, must be a power of two ≥ 2. Bigger ⇒ longer dispatch-pattern period (harder for indirect predictors to learn) but bigger memory footprint (`N × (depth+1)` bytes); once the table exceeds L1D, per-call cost inflates progressively with depth and the pre-cliff curve becomes a measurement of cache pressure rather than RAS pressure. The default keeps the table at ≤ 16 KB through depth 64 so it stays in L1D on every shipping core. |
-| `--freq=…`            | Standard ferret flag. Enables `cycles_per_site_*` columns. |
-| `--core=…`            | Standard ferret pinning flag. Pin probe and benchmark to the same core. |
-| `--reps=K`            | Standard. Run K timed repetitions per param point.       |
-| `--warmup=W`          | Standard. Run W untimed warmup iterations.               |
-| `--seed=…`            | Standard. Seeds the variant 2 path-table PRNG; combined with `depth` via `std::seed_seq` so distinct sweep points get distinct dispatch streams. Ignored by variants 0 and 1. |
+| `--seed=…`            | Seeds the variant-2 path-table PRNG; combined with `depth` via `std::seed_seq` so distinct sweep points get distinct dispatch streams. Ignored by variants 0 and 1. |
 
 ## Reading the curves
 
