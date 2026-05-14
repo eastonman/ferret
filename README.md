@@ -45,11 +45,17 @@ python3 scripts/freq.py /tmp/freq.csv
 
 # Step 2: run the actual benchmark with --freq, pinned to the same core.
 build/ferret run direct_branch_footprint --core=3 \
-    --branches=1..32768 --spacing_bytes=64 \
+    --branches=1..32768 --spacing_bytes=16..128 \
     --freq=4.521GHz --out=/tmp/btb.csv
 
-# Step 3: plot — picks cycles_per_site automatically because freq was set.
-python3 scripts/plot.py /tmp/btb.csv --out=/tmp/btb.png
+# Step 3: line plot — picks cycles_per_site automatically because freq was set.
+python3 scripts/plot.py line /tmp/btb.csv --out=/tmp/btb.png
+
+# Or with spacing_bytes on X (branches becomes the legend):
+python3 scripts/plot.py line /tmp/btb.csv --x=spacing_bytes --out=/tmp/btb-by-spacing.png
+
+# Or as a 2D heatmap (branches × spacing_bytes, cycles per site as color):
+python3 scripts/plot.py heatmap /tmp/btb.csv --out=/tmp/btb-heatmap.png
 ```
 
 CLI flags and axis syntax: [`docs/cli.md`](docs/cli.md).

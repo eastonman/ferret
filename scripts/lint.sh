@@ -22,10 +22,10 @@ echo "==> clang-format --dry-run"
 clang-format --dry-run --Werror "${CXX_FORMAT_FILES[@]}"
 
 echo "==> ruff format --check"
-ruff format --check scripts/
+ruff format --check scripts/ tests/python/
 
 echo "==> ruff check"
-ruff check scripts/
+ruff check scripts/ tests/python/
 
 if [ ! -f build/compile_commands.json ]; then
   echo "lint.sh: build/compile_commands.json missing." >&2
