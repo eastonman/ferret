@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <string>
+
 #include "ferret/axis.hpp"
 #include "ferret/cli_axis.hpp"
 
@@ -69,6 +71,102 @@ TEST(CliAxis, RangeAxisAcceptsZeroAndNegativeLists) {
   Axis x = Axis::range("x", -10, 10);
   auto v = parse_cli_axis_value("-3,0,5", x);
   EXPECT_EQ(v, (std::vector<int64_t>{-3, 0, 5}));
+}
+
+TEST(CliAxis, GeomRangeWithoutSuffixUsesAxisK) {
+  // Picked so the result obviously differs from the linear-range
+  // fallback (which would be 101 elements for "100..200"); guards
+  // against a regression where parse_cli_axis_value forgets the
+  // GeomRange case and falls through.
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 4);
+  auto v = parse_cli_axis_value("100..200", branches);
+  EXPECT_EQ(v, (std::vector<int64_t>{100, 119, 141, 168, 200}));
+}
+
+TEST(CliAxis, GeomRangeAtSuffixOverridesAxisK) {
+  // Axis declares k=4 but CLI passes @1 — CLI wins.
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 4);
+  auto v = parse_cli_axis_value("1..8@1", branches);
+  EXPECT_EQ(v, (std::vector<int64_t>{1, 2, 4, 8}));
+}
+
+TEST(CliAxis, GeomRangeAtSuffixDensifies) {
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 1);
+  auto v = parse_cli_axis_value("1024..2048@4", branches);
+  EXPECT_EQ(v, (std::vector<int64_t>{1024, 1218, 1448, 1722, 2048}));
+}
+
+TEST(CliAxis, GeomRangeAtSuffixOnLog2AxisThrowsWithSpecificMessage) {
+  // Without @k handling, parse_int("32768@4") happens to throw too —
+  // but with the wrong message. Asserting on the message text pins
+  // that the rejection comes from the @k validator, not a coincidence.
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  try {
+    (void)parse_cli_axis_value("1..32768@4", branches);
+    FAIL() << "expected std::invalid_argument";
+  } catch (const std::invalid_argument& e) {
+    std::string what(e.what());
+    EXPECT_NE(what.find("only valid for geom_range"), std::string::npos) << "got: " << what;
+  }
+}
+
+TEST(CliAxis, GeomRangeAtSuffixOnLinearRangeAxisThrowsWithSpecificMessage) {
+  Axis x = Axis::range("x", 0, 100);
+  try {
+    (void)parse_cli_axis_value("1..10@2", x);
+    FAIL() << "expected std::invalid_argument";
+  } catch (const std::invalid_argument& e) {
+    std::string what(e.what());
+    EXPECT_NE(what.find("only valid for geom_range"), std::string::npos) << "got: " << what;
+  }
+}
+
+TEST(CliAxis, GeomRangeAtSuffixRejectsNonPositiveK) {
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 1);
+  EXPECT_THROW((void)parse_cli_axis_value("1..8@0", branches), std::invalid_argument);
+  EXPECT_THROW((void)parse_cli_axis_value("1..8@-1", branches), std::invalid_argument);
+}
+
+TEST(CliAxis, GeomRangeAtSuffixRejectsMalformedK) {
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 1);
+  EXPECT_THROW((void)parse_cli_axis_value("1..8@abc", branches), std::invalid_argument);
+  EXPECT_THROW((void)parse_cli_axis_value("1..8@", branches), std::invalid_argument);
+  EXPECT_THROW((void)parse_cli_axis_value("1..8@4x", branches), std::invalid_argument);
+}
+
+TEST(CliAxis, GeomRangeAtSuffixRejectsEmptyHi) {
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 1);
+  EXPECT_THROW((void)parse_cli_axis_value("1..@4", branches), std::invalid_argument);
+}
+
+TEST(CliAxis, GeomRangeListSyntaxStillWorks) {
+  Axis branches = Axis::geom_range("branches", 1, 1 << 15, 1);
+  auto v = parse_cli_axis_value("100,250,500", branches);
+  EXPECT_EQ(v, (std::vector<int64_t>{100, 250, 500}));
+}
+
+TEST(CliAxis, EmptyHiWithAtSuffixGivesMalformedRangeOnLog2) {
+  // Was: "@k only valid for geom_range" (misleading — the real issue
+  // is empty hi). After the fix, the tokenization failure wins.
+  Axis branches = Axis::log2_range("branches", 1, 1 << 15);
+  try {
+    (void)parse_cli_axis_value("1..@4", branches);
+    FAIL() << "expected std::invalid_argument";
+  } catch (const std::invalid_argument& e) {
+    std::string what(e.what());
+    EXPECT_NE(what.find("malformed range"), std::string::npos) << "got: " << what;
+  }
+}
+
+TEST(CliAxis, EmptyHiWithAtSuffixGivesMalformedRangeOnLinearRange) {
+  Axis x = Axis::range("x", 0, 100);
+  try {
+    (void)parse_cli_axis_value("1..@4", x);
+    FAIL() << "expected std::invalid_argument";
+  } catch (const std::invalid_argument& e) {
+    std::string what(e.what());
+    EXPECT_NE(what.find("malformed range"), std::string::npos) << "got: " << what;
+  }
 }
 
 // ----- parse_option_value -----
