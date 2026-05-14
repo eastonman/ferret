@@ -18,13 +18,13 @@ TEST(NestedCallDepth, ExposesSingleDepthAxis) {
   EXPECT_EQ(axes[0].name(), "depth");
 }
 
-TEST(NestedCallDepth, ExposesPathTableRowsOptionWithDefault4096) {
+TEST(NestedCallDepth, ExposesPathTableRowsOptionWithDefault256) {
   auto b = ferret::BenchmarkRegistry::create("nested_call_depth");
   ASSERT_NE(b, nullptr);
   auto opts = b->options();
   ASSERT_EQ(opts.size(), 1u);
   EXPECT_EQ(opts[0].name, "path_table_rows");
-  EXPECT_EQ(opts[0].default_value, 4096);
+  EXPECT_EQ(opts[0].default_value, 256);
 }
 
 }  // namespace
