@@ -5,6 +5,41 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# --- Sanitizers ---
+# Off by default — production and timing-sensitive runs are unchanged.
+# Flags are added via add_compile_options / add_link_options before
+# FetchContent so vendored deps (gtest, CLI11, spdlog, sljit) are
+# instrumented too. Required: shadow memory in sanitizer-built code is
+# not safe to mix with uninstrumented libs that allocate or take
+# addresses of locals in ways ASan/UBSan would otherwise see as
+# violations.
+set(FERRET_SANITIZER "" CACHE STRING
+  "Enable sanitizers. One of: address, undefined, address+undefined, thread.")
+set_property(CACHE FERRET_SANITIZER PROPERTY STRINGS
+  "" "address" "undefined" "address+undefined" "thread")
+
+if(FERRET_SANITIZER)
+  if(FERRET_SANITIZER STREQUAL "address")
+    set(_ferret_san_arg "-fsanitize=address")
+  elseif(FERRET_SANITIZER STREQUAL "undefined")
+    set(_ferret_san_arg "-fsanitize=undefined")
+  elseif(FERRET_SANITIZER STREQUAL "address+undefined")
+    set(_ferret_san_arg "-fsanitize=address,undefined")
+  elseif(FERRET_SANITIZER STREQUAL "thread")
+    set(_ferret_san_arg "-fsanitize=thread")
+  else()
+    message(FATAL_ERROR
+      "FERRET_SANITIZER='${FERRET_SANITIZER}' is invalid. "
+      "Valid values: address, undefined, address+undefined, thread.")
+  endif()
+  message(STATUS "ferret: sanitizers enabled (${FERRET_SANITIZER})")
+  # -fno-omit-frame-pointer and -g produce readable sanitizer stack
+  # traces. Do not force an optimization level: the caller's build type
+  # (Debug/RelWithDebInfo/Release) still applies.
+  add_compile_options(${_ferret_san_arg} -fno-omit-frame-pointer -g)
+  add_link_options(${_ferret_san_arg})
+endif()
+
 # --- GoogleTest: find_package first, FetchContent fallback ---
 find_package(GTest QUIET)
 if(NOT GTest_FOUND)

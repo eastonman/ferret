@@ -1,0 +1,43 @@
+name: sanitizers
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  sanitize:
+    name: sanitize (${{ matrix.sanitizer }} on ${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+        sanitizer: [address+undefined, thread]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: configure
+        run: >
+          cmake -S . -B build -GNinja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DFERRET_SANITIZER=${{ matrix.sanitizer }}
+
+      - name: build
+        run: cmake --build build
+
+      # halt_on_error=1 + exitcode=1 make any sanitizer finding fail CI
+      # rather than print-and-continue. print_stacktrace=1 gives a
+      # symbolized trace at the failure site. detect_leaks=1 is the LSan
+      # default under ASan on Linux but is set explicitly so the intent
+      # is visible.
+      - name: test
+        env:
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:exitcode=1:detect_leaks=1:print_stacktrace=1
+          UBSAN_OPTIONS: halt_on_error=1:exitcode=1:print_stacktrace=1
+          TSAN_OPTIONS: halt_on_error=1:exitcode=1:second_deadlock_stack=1
+        run: ctest --test-dir build --output-on-failure
