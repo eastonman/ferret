@@ -8,22 +8,43 @@ on:
 
 jobs:
   build-test:
-    name: build-test (${{ matrix.os }})
+    name: build-test (${{ matrix.cc }} on ${{ matrix.os }})
     strategy:
       fail-fast: false
+      # Explicit include cells so we can pair compilers with OSes without
+      # generating unwanted combinations. FERRET_WERROR is ON by default,
+      # so every cell here doubles as a warning-cleanliness check.
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        include:
+          # --- Linux x86_64 ---
+          - { os: ubuntu-latest, cc: gcc-13, cxx: g++-13, apt: "gcc-13 g++-13" }
+          - { os: ubuntu-latest, cc: gcc-14, cxx: g++-14, apt: "gcc-14 g++-14" }
+          - { os: ubuntu-latest, cc: clang-17, cxx: clang++-17, apt: "clang-17" }
+          - { os: ubuntu-latest, cc: clang-18, cxx: clang++-18, apt: "clang-18" }
+          # --- Linux aarch64 ---
+          - { os: ubuntu-24.04-arm, cc: gcc-14, cxx: g++-14, apt: "gcc-14 g++-14" }
+          - { os: ubuntu-24.04-arm, cc: clang-18, cxx: clang++-18, apt: "clang-18" }
+          # --- macOS arm64 (Apple Clang from Xcode) ---
+          - { os: macos-latest, cc: clang, cxx: clang++, apt: "" }
     runs-on: ${{ matrix.os }}
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: install ninja (linux)
+      - name: install toolchain + ninja (linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build ${{ matrix.apt }}
 
       - name: install ninja (macos)
         if: runner.os == 'macOS'
         run: brew install ninja
+
+      - name: print compiler version
+        run: ${{ matrix.cxx }} --version
 
       - name: configure
         run: cmake -S . -B build -GNinja
