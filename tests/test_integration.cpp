@@ -279,6 +279,22 @@ TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
   EXPECT_EQ(0u, std::filesystem::file_size(out));
 }
 
+TEST(Integration, NestedCallDepthDepth1SmokeProducesOneRow) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_ncd_smoke.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=1 --path_table_rows=16"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 2u) << "expected 1 header + 1 data row, got:\n" << contents;
+}
+
 namespace {
 
 void expect_spacing_rejected(const std::string& spacing_arg) {
@@ -303,6 +319,43 @@ void expect_spacing_rejected(const std::string& spacing_arg) {
 }
 
 }  // namespace
+
+TEST(Integration, NestedCallDepthKEightStaticStillRunsCleanly) {
+  // Same shape as the depth-1 smoke, but uses larger depths and asserts
+  // no empty cells. After Task 6 each body emits 8 call sites; this test
+  // protects against a regression where some of those sites fall through
+  // or are not properly wired.
+  auto out = std::filesystem::temp_directory_path() / "ferret_ncd_k8.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=1,4,16 --path_table_rows=16"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 4u);
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
+}
+
+TEST(Integration, NestedCallDepthSweepProducesMonotonicCost) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_ncd_sweep.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=1,2,4,8 --path_table_rows=16"
+                    " --reps=5 --warmup=2"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 5u);
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
+}
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 // AArch64 instructions are 4-byte fixed-width and 4-byte aligned, so the
@@ -422,4 +475,52 @@ TEST(Integration, FreqProbeExactOpCountSanity) {
   double ratio = ns_b / ns_a;
   EXPECT_GT(ratio, 0.3) << "ns_a=" << ns_a << " ns_b=" << ns_b;
   EXPECT_LT(ratio, 3.0) << "ns_a=" << ns_a << " ns_b=" << ns_b;
+}
+
+TEST(Integration, NestedCallDepthRejectsBadPathTableRows) {
+  for (const char* val : {"3", "5", "0", "1"}) {
+    auto err = std::filesystem::temp_directory_path() / ("ferret_ncd_bad_rows_" + std::string(val) + ".txt");
+    std::filesystem::remove(err);
+    std::string cmd = std::string(FERRET_BINARY) +
+                      " run nested_call_depth"
+                      " --depth=2 --path_table_rows=" +
+                      val +
+                      " --reps=2 --warmup=1"
+                      " 2> " +
+                      err.string();
+    int rc = actual_exit_code(std::system(cmd.c_str()));
+    EXPECT_EQ(rc, 2) << "path_table_rows=" << val << ": expected exit 2";
+    std::string err_contents = slurp(err.string());
+    EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
+  }
+}
+
+TEST(Integration, NestedCallDepthRejectsZeroDepth) {
+  auto err = std::filesystem::temp_directory_path() / "ferret_ncd_zero_depth.txt";
+  std::filesystem::remove(err);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=0 --path_table_rows=16"
+                    " --reps=2 --warmup=1"
+                    " 2> " +
+                    err.string();
+  int rc = actual_exit_code(std::system(cmd.c_str()));
+  EXPECT_EQ(rc, 2);
+}
+
+TEST(Integration, NestedCallDepthLongSweepRowCount) {
+  // 64 swept depths × 1 row each + 1 header = 65 newlines.
+  auto out = std::filesystem::temp_directory_path() / "ferret_ncd_full.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run nested_call_depth"
+                    " --depth=1..64 --path_table_rows=16"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 65u) << "expected 1 header + 64 data rows";
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
 }
