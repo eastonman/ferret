@@ -41,3 +41,30 @@ jobs:
           UBSAN_OPTIONS: halt_on_error=1:exitcode=1:print_stacktrace=1
           TSAN_OPTIONS: halt_on_error=1:exitcode=1:second_deadlock_stack=1
         run: ctest --test-dir build --output-on-failure
+
+      # On failure dump the per-case stderr captured by integration tests
+      # so sanitizer reports show up in the CI log instead of in lost temp
+      # files. Diagnostic only — safe to remove once the failures are
+      # understood.
+      - name: dump ferret integration stderr on failure
+        if: failure()
+        run: |
+          for f in /tmp/ferret_*_err.txt; do
+            [ -e "$f" ] || continue
+            echo "===== $f ====="
+            cat "$f"
+            echo
+          done
+
+      - name: rerun one failing case directly (huge branches)
+        if: failure()
+        env:
+          ASAN_OPTIONS: halt_on_error=0:exitcode=1:detect_leaks=1:print_stacktrace=1
+          UBSAN_OPTIONS: halt_on_error=0:exitcode=1:print_stacktrace=1
+        run: |
+          ./build/ferret run direct_branch_footprint \
+            --branches=4611686018427387904 --spacing_bytes=64 --reps=2 --warmup=1 \
+            > /tmp/diag.out 2> /tmp/diag.err || true
+          echo "=== exit=$? ==="
+          echo "=== stdout ==="; cat /tmp/diag.out
+          echo "=== stderr ==="; cat /tmp/diag.err
