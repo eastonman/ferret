@@ -49,6 +49,32 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+### Sanitizer builds
+
+Off by default — timing-sensitive runs use clean code. Enable via
+`-DFERRET_SANITIZER=<mode>`:
+
+| Mode                | Catches                                                      |
+|---------------------|--------------------------------------------------------------|
+| `address`           | use-after-free, heap/stack overflow, leaks (LSan, Linux)     |
+| `undefined`         | signed overflow, null deref, alignment, type mismatches      |
+| `address+undefined` | both of the above (default in CI)                            |
+| `thread`            | data races, deadlocks                                        |
+
+```sh
+cmake -S . -B build-asan -GNinja -DFERRET_SANITIZER=address+undefined
+cmake --build build-asan
+UBSAN_OPTIONS=halt_on_error=1:print_stacktrace=1 \
+ASAN_OPTIONS=halt_on_error=1:detect_leaks=1 \
+  ctest --test-dir build-asan --output-on-failure
+```
+
+CI runs `address+undefined` and `thread` on Linux x86_64 and arm64
+(`.github/workflows/sanitizers.yml`). macOS sanitizer support depends
+on the toolchain; nixpkgs-clang ASan/TSan currently has runtime-init
+issues on Apple Silicon — use UBSan there or build under a Linux
+container.
+
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — codebase overview and module map.
