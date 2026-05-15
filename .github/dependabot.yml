@@ -1,0 +1,27 @@
+version: 2
+updates:
+  # Python tooling for this repo is pinned through the Nix devShell, so
+  # Dependabot only needs to manage workflow actions and flake inputs here.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    groups:
+      nix:
+        patterns:
+          - "*"
