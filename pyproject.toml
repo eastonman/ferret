@@ -1,7 +1,7 @@
 [tool.ruff]
 line-length = 120
 target-version = "py311"
-required-version = "0.15.12"
+required-version = ">=0.14"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "PL"]
