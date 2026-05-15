@@ -1,5 +1,7 @@
-{ stdenv, src }:
-
+{
+  stdenv,
+  src,
+}:
 stdenv.mkDerivation {
   pname = "sljit";
   version = "unstable-2026-02-15";

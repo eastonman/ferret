@@ -2,20 +2,27 @@
   description = "ferret — frontend reverse-engineering toolkit";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     sljit-src = {
       url = "github:zherczeg/sljit";
       flake = false;
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, sljit-src }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    sljit-src,
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
         pkgs = nixpkgs.legacyPackages.${system};
-        sljit = pkgs.callPackage ./nix/sljit.nix { src = sljit-src; };
+        sljit = pkgs.callPackage ./nix/sljit.nix {src = sljit-src;};
       in {
+        formatter = pkgs.nixfmt-rfc-style;
+
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.cmake
@@ -27,7 +34,14 @@
             pkgs.ruff
             pkgs.spdlog
             sljit
-            (pkgs.python3.withPackages (ps: [ ps.matplotlib ps.pandas ps.pytest ]))
+            (pkgs.python3.withPackages (
+              ps:
+                with ps; [
+                  matplotlib
+                  pandas
+                  pytest
+                ]
+            ))
           ];
         };
 
@@ -35,5 +49,6 @@
           inherit sljit;
           src = self;
         };
-      });
+      }
+    );
 }
