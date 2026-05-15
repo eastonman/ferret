@@ -52,10 +52,10 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> Figure:
         for keys, sub in df.groupby(series_cols):
             label_keys = keys if isinstance(keys, tuple) else (keys,)
             label = ", ".join(f"{c}={v}" for c, v in zip(series_cols, label_keys, strict=True))
-            ax.plot(sub[xcol], sub[metric.column], marker="o", markersize=3, label=label)
+            ax.plot(sub[xcol], sub[metric.column], marker="o", markersize=2, linewidth=1.0, label=label)
         ax.legend()
     else:
-        ax.plot(df[xcol], df[metric.column], marker="o", markersize=3)
+        ax.plot(df[xcol], df[metric.column], marker="o", markersize=2, linewidth=1.0)
 
     apply_axis(ax.xaxis, df[xcol].unique(), scale=xscale)
     ax.set_xlabel(xcol)

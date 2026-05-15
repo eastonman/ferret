@@ -12,7 +12,7 @@ from matplotlib.image import AxesImage
 
 from ferret_plot.columns import varying_axis_columns
 from ferret_plot.errors import PlotError
-from ferret_plot.formatting import human_readable
+from ferret_plot.formatting import decimate_indices, human_readable
 from ferret_plot.registry import BenchmarkDefaults
 
 
@@ -81,10 +81,14 @@ def render_heatmap_cell(  # noqa: PLR0913
     data = np.ma.masked_invalid(pivot.values)
     im = ax.imshow(data, aspect="auto", origin="lower", norm=norm, cmap="viridis")
     im.cmap.set_bad(color="lightgrey")
-    ax.set_xticks(range(len(pivot.columns)))
-    ax.set_xticklabels([human_readable(v) for v in pivot.columns])
-    ax.set_yticks(range(len(pivot.index)))
-    ax.set_yticklabels([human_readable(v) for v in pivot.index])
+    # Decimate against the labels so power-of-2 sweeps keep ticks on actual
+    # powers of 2; positions and label strings stay in lockstep via the index.
+    x_idx = decimate_indices(list(pivot.columns))
+    ax.set_xticks(x_idx)
+    ax.set_xticklabels([human_readable(pivot.columns[i]) for i in x_idx])
+    y_idx = decimate_indices(list(pivot.index))
+    ax.set_yticks(y_idx)
+    ax.set_yticklabels([human_readable(pivot.index[i]) for i in y_idx])
     ax.set_xlabel(xcol)
     ax.set_ylabel(ycol)
     return im
