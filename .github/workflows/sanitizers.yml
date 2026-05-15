@@ -16,7 +16,7 @@ jobs:
         sanitizer: [address+undefined, thread]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: install ninja
         run: sudo apt-get update && sudo apt-get install -y ninja-build

@@ -11,7 +11,7 @@ jobs:
     name: format-lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: DeterminateSystems/nix-installer-action@v22
 
       - name: configure + lint (in devshell, pinned tool versions)
