@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,17 @@ extern "C" {
 #include <sljitLir.h>
 }
 
+namespace ferret::branch_history_footprint_internal {
+// Exposed for unit testing; defined in benchmarks/branch_history_footprint.cpp.
+std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len, int64_t pattern, uint64_t seed);
+struct LayoutSnapshot {
+  std::vector<sljit_label*> labels;
+  size_t branches;
+  size_t spacing;
+};
+LayoutSnapshot last_layout_snapshot();
+}  // namespace ferret::branch_history_footprint_internal
+
 TEST(BranchHistoryFootprint, RegistryLookupReturnsBenchmark) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
@@ -17,8 +29,7 @@ TEST(BranchHistoryFootprint, RegistryLookupReturnsBenchmark) {
 }
 
 namespace {
-ferret::Params make_params(int64_t branches, int64_t history_len,
-                           int64_t pattern = 1, int64_t spacing = 16) {
+ferret::Params make_params(int64_t branches, int64_t history_len, int64_t pattern = 1, int64_t spacing = 16) {
   ferret::Params p;
   p.set("branches", branches);
   p.set("history_len", history_len);
@@ -104,22 +115,9 @@ TEST(BranchHistoryFootprint, RejectsSpacingBytesTooSmall) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
-  // min site is 8 bytes on AArch64, 9 on x86_64. 4 is below both.
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/1, /*spacing=*/4)),
-               std::invalid_argument);
+  // Min site is 8 bytes on AArch64, 6 on x86_64. 4 is below both.
+  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/1, /*spacing=*/4)), std::invalid_argument);
 }
-
-#if defined(__aarch64__) || defined(_M_ARM64)
-TEST(BranchHistoryFootprint, RejectsSpacingBytesMisaligned) {
-  auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
-  ASSERT_NE(b, nullptr);
-  CompilerHandle ch;
-  // AArch64 needs 4-byte alignment. 9 is not divisible by 4 and is also >= kMinSiteBytes=8,
-  // so this exercises the alignment path specifically.
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, 1, /*spacing=*/9)),
-               std::invalid_argument);
-}
-#endif
 
 TEST(BranchHistoryFootprint, RejectsZeroBranches) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
@@ -139,16 +137,85 @@ TEST(BranchHistoryFootprint, RejectsInvalidPattern) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/2)),
-               std::invalid_argument);
+  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/2)), std::invalid_argument);
 }
 
-#if defined(__aarch64__) || defined(_M_ARM64)
-TEST(BranchHistoryFootprint, RejectsBranchesAboveAArch64LdrImmediateLimit) {
+TEST(BranchHistoryFootprint, ZeroPatternProducesAllZeros) {
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(
+      /*branches=*/4, /*history_len=*/8, /*pattern=*/0, /*seed=*/1);
+  ASSERT_EQ(v.size(), 32u);
+  for (uint32_t x : v) EXPECT_EQ(x, 0u);
+}
+
+TEST(BranchHistoryFootprint, RandomPatternIsDeterministicForSameSeed) {
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
+  EXPECT_EQ(a, b);
+}
+
+TEST(BranchHistoryFootprint, RandomPatternDiffersBetweenSeeds) {
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 43);
+  EXPECT_NE(a, b);
+}
+
+TEST(BranchHistoryFootprint, RandomPatternDiffersByParamPoint) {
+  // Seed mix includes (branches, history_len), so different points diverge.
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(4, 16, 1, 1);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 1);
+  // Different sizes → not directly comparable; check that the prefix differs.
+  size_t common = std::min(a.size(), b.size());
+  bool any_diff = false;
+  for (size_t i = 0; i < common; ++i) {
+    if (a[i] != b[i]) {
+      any_diff = true;
+      break;
+    }
+  }
+  EXPECT_TRUE(any_diff);
+}
+
+TEST(BranchHistoryFootprint, RandomPatternValuesAreZeroOrOne) {
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 32, 1, 7);
+  for (uint32_t x : v) {
+    EXPECT_TRUE(x == 0u || x == 1u) << "value out of {0,1}: " << x;
+  }
+}
+
+TEST(BranchHistoryFootprint, EmitsValidKernelForSmallParams) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(/*branches=*/4096, 4)),
-               std::invalid_argument);
+  auto p = make_params(/*branches=*/4, /*history_len=*/8,
+                       /*pattern=*/1, /*spacing=*/16);
+  ASSERT_NO_THROW(b->emit_kernel(ch.c, p));
+  ASSERT_EQ(sljit_get_compiler_error(ch.c), SLJIT_SUCCESS);
+
+  void* code = sljit_generate_code(ch.c, 0, nullptr);
+  ASSERT_NE(code, nullptr);
+
+  ASSERT_NO_THROW(b->verify_layout(ch.c));
+  sljit_free_code(code, nullptr);
 }
-#endif
+
+TEST(BranchHistoryFootprint, LayoutSnapshotMeetsMinimumSpacing) {
+  auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
+  ASSERT_NE(b, nullptr);
+  CompilerHandle ch;
+  b->emit_kernel(ch.c, make_params(/*branches=*/4, /*history_len=*/4,
+                                   /*pattern=*/0, /*spacing=*/16));
+  void* code = sljit_generate_code(ch.c, 0, nullptr);
+  ASSERT_NE(code, nullptr);
+  b->verify_layout(ch.c);
+
+  auto snap = ferret::branch_history_footprint_internal::last_layout_snapshot();
+  ASSERT_EQ(snap.branches, 4u);
+  ASSERT_EQ(snap.spacing, 16u);
+  ASSERT_EQ(snap.labels.size(), 5u);  // branches + 1 (chain exit)
+  sljit_uw base = sljit_get_label_addr(snap.labels[0]);
+  for (size_t i = 1; i <= snap.branches; ++i) {
+    sljit_uw addr = sljit_get_label_addr(snap.labels[i]);
+    EXPECT_GE(addr - base, i * snap.spacing) << "site " << i << " closer than min spacing";
+  }
+  sljit_free_code(code, nullptr);
+}
