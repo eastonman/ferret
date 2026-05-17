@@ -1,0 +1,4 @@
+# Test + lint deps — Nix users: see flake.nix.
+-r requirements.txt
+pytest
+ruff>=0.14

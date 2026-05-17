@@ -1,0 +1,4 @@
+# Runtime deps for scripts/ — Nix users: see flake.nix.
+matplotlib
+numpy
+pandas
