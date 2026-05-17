@@ -1,0 +1,70 @@
+name: codeql
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly Monday 06:00 UTC. CodeQL's rule set evolves; the cron run
+    # catches new findings even when no code changes have landed.
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      # SARIF upload to the Security tab.
+      security-events: write
+      # Required by codeql-action on private repos to read workflow runs.
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { language: c-cpp,  build-mode: manual }
+          - { language: python, build-mode: none }
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: install toolchain (c-cpp only)
+        if: matrix.language == 'c-cpp'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build clang-18
+
+      - name: init CodeQL
+        uses: github/codeql-action/init@458d36d7d4f47d0dd16ca424c1d3cda0060f1360  # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # FERRET_WERROR=OFF so a future CodeQL-instrumented build cannot
+      # fail on a warning that the build workflow already polices on
+      # seven (compiler × OS) cells. CodeQL needs a successful build to
+      # extract its database; warning enforcement is a separate signal.
+      - name: build (c-cpp only)
+        if: matrix.language == 'c-cpp'
+        env:
+          CC: clang-18
+          CXX: clang++-18
+        run: |
+          cmake -S . -B build -GNinja -DFERRET_WERROR=OFF
+          cmake --build build
+
+      - name: analyze
+        uses: github/codeql-action/analyze@458d36d7d4f47d0dd16ca424c1d3cda0060f1360  # v3
+        with:
+          category: /language:${{ matrix.language }}
