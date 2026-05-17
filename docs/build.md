@@ -29,6 +29,16 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+Scripts under `scripts/` need matplotlib, numpy, and pandas (plus
+pytest and ruff for tests). Nix users get these via `flake.nix`;
+otherwise:
+
+```sh
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt      # runtime
+pip install -r requirements-dev.txt  # + pytest, ruff
+```
+
 ## Sanitizer builds
 
 Off by default — timing-sensitive runs use clean code. Enable via
