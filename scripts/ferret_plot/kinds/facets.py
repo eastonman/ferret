@@ -38,6 +38,8 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> Figure:
     xcol, ycol = resolve_heatmap_xy(df, args, defaults, exclude=frozenset({facet}))
 
     facet_values = sorted(df[facet].dropna().unique().tolist())
+    if not facet_values:
+        raise PlotError(f"--facet={facet!r} has no non-NaN values to plot")
     n = len(facet_values)
     ncols = max(1, math.ceil(math.sqrt(n)))
     nrows = math.ceil(n / ncols)

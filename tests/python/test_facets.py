@@ -46,6 +46,12 @@ class TestFacetsMakeFigure:
         with pytest.raises(PlotError, match="--facet"):
             facets_kind.make_figure(df, _args(facet=None))
 
+    def test_facet_with_only_nan_values_raises_plot_error(self):
+        df = three_axis_df()
+        df["variant"] = None
+        with pytest.raises(PlotError, match="no non-NaN values"):
+            facets_kind.make_figure(df, _args(facet="variant"))
+
     def test_two_axis_csv_raises(self):
         df = dbf_df()
         with pytest.raises(PlotError, match="at least 2 varying axis columns"):
