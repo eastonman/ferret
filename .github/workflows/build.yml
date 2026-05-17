@@ -6,9 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     name: build-test (${{ matrix.cc }} on ${{ matrix.os }})
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       # Explicit include cells so we can pair compilers with OSes without

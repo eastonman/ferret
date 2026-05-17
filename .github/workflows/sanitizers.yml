@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   sanitize:
     name: sanitize (${{ matrix.sanitizer }} on ${{ matrix.os }})
@@ -15,6 +22,7 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04-arm]
         sanitizer: [address+undefined, thread]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
