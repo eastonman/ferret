@@ -115,6 +115,61 @@ TEST(Integration, DependentChainThroughputProducesOneRow) {
   EXPECT_EQ(newlines, 2u);
 }
 
+TEST(Integration, BranchHistoryFootprintProducesExpectedRowCount) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bhf.csv";
+  std::filesystem::remove(out);
+  // branches ∈ {1,2,4} × history_len ∈ {4,8} → 6 data rows.
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run branch_history_footprint"
+                    " --branches=1..4 --history_len=4..8"
+                    " --pattern=0"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 7u);  // header + 6 data rows
+  EXPECT_EQ(contents.find(",,\n"), std::string::npos);
+}
+
+TEST(Integration, BranchHistoryFootprintHeaderHasExpectedColumns) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bhf_hdr.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run branch_history_footprint"
+                    " --branches=1 --history_len=4"
+                    " --pattern=0 --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  EXPECT_NE(contents.find("branches"), std::string::npos);
+  EXPECT_NE(contents.find("history_len"), std::string::npos);
+  EXPECT_NE(contents.find("pattern"), std::string::npos);
+  EXPECT_NE(contents.find("spacing_bytes"), std::string::npos);
+}
+
+TEST(Integration, BranchHistoryFootprintRandomPatternProducesNonEmptyRows) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bhf_rand.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run branch_history_footprint"
+                    " --branches=1,2 --history_len=4,8"
+                    " --pattern=1 --seed=7"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 5u);  // header + 4 rows
+  EXPECT_EQ(contents.find(",,"), std::string::npos);
+}
+
 // Process exit code returned by std::system on POSIX is encoded —
 // WEXITSTATUS extracts the actual program exit code.
 namespace {
