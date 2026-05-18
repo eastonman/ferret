@@ -112,13 +112,19 @@ if(SLJIT_INCLUDE_DIR AND SLJIT_LIBRARY)
   )
 else()
   include(FetchContent)
+  # Pin to the same sljit revision as the Nix flake input so Nix-built
+  # ferret and FetchContent-fallback ferret link against identical
+  # sources. flake.lock is the single source of truth; Dependabot bumps
+  # it weekly.
+  file(READ "${CMAKE_SOURCE_DIR}/flake.lock" _ferret_flake_lock)
+  string(JSON _ferret_sljit_rev GET "${_ferret_flake_lock}" nodes sljit-src locked rev)
   # SOURCE_SUBDIR set to a non-existent directory so MakeAvailable
   # populates the source tree without calling add_subdirectory —
   # sljit's own CMakeLists builds a test exe with Windows-only link
   # flags (-Wl,--stack,...) that break Linux/macOS builds.
   FetchContent_Declare(sljit_fetched
     GIT_REPOSITORY https://github.com/zherczeg/sljit.git
-    GIT_TAG d9902b1ba06f477dcb89137dae8c8649fb58b7fb
+    GIT_TAG ${_ferret_sljit_rev}
     SOURCE_SUBDIR  do_not_use_upstream_cmake
   )
   FetchContent_MakeAvailable(sljit_fetched)
