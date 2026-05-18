@@ -43,3 +43,16 @@ class TestPrepareGrid:
         grid = prepare_grid(df, xcol="branches", ycol="spacing_bytes", value_col="cycles_per_site_min")
 
         assert grid.isna().to_numpy().any()
+
+    def test_require_complete_raises_for_all_nan_column(self):
+        df = dbf_df(branches=(1, 2), spacing=(16, 32))
+        df.loc[df["branches"] == _MISSING_BRANCH, "cycles_per_site_min"] = float("nan")
+
+        with pytest.raises(PlotError, match="missing grid cells"):
+            prepare_grid(
+                df,
+                xcol="branches",
+                ycol="spacing_bytes",
+                value_col="cycles_per_site_min",
+                require_complete=True,
+            )

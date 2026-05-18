@@ -76,7 +76,15 @@ def prepare_grid(
     being silently averaged.
     """
     grid = (
-        sub_df.pivot_table(index=ycol, columns=xcol, values=value_col, aggfunc="first").sort_index().sort_index(axis=1)
+        sub_df.pivot_table(
+            index=ycol,
+            columns=xcol,
+            values=value_col,
+            aggfunc="first",
+            dropna=False,
+        )
+        .sort_index()
+        .sort_index(axis=1)
     )
     if require_complete and grid.isna().to_numpy().any():
         missing = [
