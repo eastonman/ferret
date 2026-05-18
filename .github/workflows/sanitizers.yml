@@ -53,12 +53,14 @@ jobs:
 
       # halt_on_error=1 + exitcode=1 make any sanitizer finding fail CI
       # rather than print-and-continue. print_stacktrace=1 gives a
-      # symbolized trace at the failure site. detect_leaks=1 is the LSan
-      # default under ASan on Linux but is set explicitly so the intent
-      # is visible.
+      # symbolized trace at the failure site. Leak detection: on Linux,
+      # LSan is enabled by default under ASan, so it runs without being
+      # named here; on macOS, ASan is not bundled with LSan and naming
+      # detect_leaks at all aborts startup ("detect_leaks is not
+      # supported on this platform"), so we deliberately do not set it.
       - name: test
         env:
-          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:exitcode=1:detect_leaks=1:print_stacktrace=1
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=0:exitcode=1:print_stacktrace=1
           UBSAN_OPTIONS: halt_on_error=1:exitcode=1:print_stacktrace=1
           TSAN_OPTIONS: halt_on_error=1:exitcode=1:second_deadlock_stack=1
         run: ctest --test-dir build --output-on-failure
