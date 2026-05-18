@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 from conftest import make_args
 from ferret_plot.errors import PlotError
@@ -45,6 +46,40 @@ class TestFacetsMakeFigure:
         df = three_axis_df()
         with pytest.raises(PlotError, match="--facet"):
             facets_kind.make_figure(df, _args(facet=None))
+
+    def test_facet_with_only_nan_values_raises_plot_error(self):
+        df = three_axis_df()
+        df["variant"] = None
+        with pytest.raises(PlotError, match="no non-NaN values"):
+            facets_kind.make_figure(df, _args(facet="variant"))
+
+    def test_mixed_type_facet_values_do_not_crash_sorting(self):
+        variants = (1, "a")
+        rows = []
+        for branch in (1, 2):
+            for spacing in (16, 32):
+                for variant in variants:
+                    rows.append(
+                        {
+                            "benchmark": "synthetic_three_axis",
+                            "branches": branch,
+                            "spacing_bytes": spacing,
+                            "variant": variant,
+                            "ticks_min": 1000,
+                            "ticks_median": 1000,
+                            "iters": 1,
+                            "sites_per_iter": branch,
+                            "reps": 7,
+                            "ns_per_site_min": 0.5 + branch * 0.01 + spacing * 0.001 + (0.1 if variant == "a" else 0.0),
+                            "ns_per_site_median": 0.5
+                            + branch * 0.01
+                            + spacing * 0.001
+                            + (0.1 if variant == "a" else 0.0),
+                        }
+                    )
+        df = pd.DataFrame(rows)
+        fig = facets_kind.make_figure(df, _args(facet="variant"))
+        assert len(_heatmap_axes(fig)) == len(variants)
 
     def test_two_axis_csv_raises(self):
         df = dbf_df()
