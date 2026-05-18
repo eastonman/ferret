@@ -15,6 +15,8 @@ from ferret_plot.errors import PlotError
 from ferret_plot.formatting import decimate_indices, human_readable
 from ferret_plot.registry import BenchmarkDefaults
 
+_MISSING_PREVIEW_LIMIT = 5
+
 
 def resolve_heatmap_xy(
     df: pd.DataFrame,
@@ -78,13 +80,10 @@ def prepare_grid(
     )
     if require_complete and grid.isna().to_numpy().any():
         missing = [
-            f"({xcol}={x}, {ycol}={y})"
-            for y, row in grid.iterrows()
-            for x, value in row.items()
-            if pd.isna(value)
+            f"({xcol}={x}, {ycol}={y})" for y, row in grid.iterrows() for x, value in row.items() if pd.isna(value)
         ]
-        shown = ", ".join(missing[:5])
-        suffix = "" if len(missing) <= 5 else f", ... ({len(missing)} total)"
+        shown = ", ".join(missing[:_MISSING_PREVIEW_LIMIT])
+        suffix = "" if len(missing) <= _MISSING_PREVIEW_LIMIT else f", ... ({len(missing)} total)"
         raise PlotError(f"missing grid cells for surface plot: {shown}{suffix}")
     return grid
 

@@ -9,6 +9,12 @@ from ferret_plot.kinds import surface as surface_kind
 from fixtures import dct_df, tage_capacity_df
 from matplotlib.colors import LogNorm
 
+_SURFACE_COLORBAR_AXES = 2
+_SURFACE_ELEV = 42.0
+_SURFACE_AZIM = -35.0
+_MISSING_BRANCH_AMOUNT = 128
+_MISSING_PATTERN_AMOUNT = 8
+
 
 def _args(**overrides):
     return make_args("surface", **overrides)
@@ -40,7 +46,7 @@ class TestSurfaceMakeFigure:
     def test_colorbar_present(self):
         df = tage_capacity_df()
         fig = surface_kind.make_figure(df, _args())
-        assert len(fig.axes) == 2
+        assert len(fig.axes) == _SURFACE_COLORBAR_AXES
         assert _surface_axis(fig) is fig.axes[0]
 
     def test_logz_sets_surface_lognorm(self):
@@ -51,10 +57,10 @@ class TestSurfaceMakeFigure:
 
     def test_camera_flags_set_view_angles(self):
         df = tage_capacity_df()
-        fig = surface_kind.make_figure(df, _args(elev=42.0, azim=-35.0))
+        fig = surface_kind.make_figure(df, _args(elev=_SURFACE_ELEV, azim=_SURFACE_AZIM))
         ax = _surface_axis(fig)
-        assert ax.elev == 42.0
-        assert ax.azim == -35.0
+        assert ax.elev == _SURFACE_ELEV
+        assert ax.azim == _SURFACE_AZIM
 
     def test_one_axis_csv_raises(self):
         df = dct_df(chain_lengths=(100, 200, 300))
@@ -73,7 +79,7 @@ class TestSurfaceMakeFigure:
 
     def test_missing_grid_cell_raises(self):
         df = tage_capacity_df(branch_amounts=(64, 128), pattern_amounts=(4, 8))
-        df = df[~((df["branch_amount"] == 128) & (df["pattern_amount"] == 8))]
+        df = df[~((df["branch_amount"] == _MISSING_BRANCH_AMOUNT) & (df["pattern_amount"] == _MISSING_PATTERN_AMOUNT))]
         with pytest.raises(PlotError, match="missing grid cells"):
             surface_kind.make_figure(df, _args())
 
