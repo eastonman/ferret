@@ -38,6 +38,7 @@
               ps:
                 with ps; [
                   matplotlib
+                  numpy
                   pandas
                   pytest
                 ]
