@@ -19,8 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
         sanitizer: [address+undefined, thread]
+        exclude:
+          # TSan on macOS arm64 (Apple clang) is patchy across Xcode
+          # versions; ASan+UBSan already covers the leak/UB regressions
+          # we care about on Apple Silicon. Revisit if TSan becomes a
+          # first-class need on this platform.
+          - { os: macos-latest, sanitizer: thread }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     steps:
@@ -28,8 +34,13 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: install ninja
+      - name: install ninja (linux)
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: install ninja (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
 
       - name: configure
         run: >
