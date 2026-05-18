@@ -163,6 +163,7 @@ add_executable(ferret
   benchmarks/dependent_chain_throughput.cpp
   benchmarks/direct_branch_footprint.cpp
   benchmarks/nested_call_depth.cpp
+  benchmarks/branch_history_footprint.cpp
 )
 target_link_libraries(ferret PRIVATE
   ferret_core
