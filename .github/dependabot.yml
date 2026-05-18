@@ -9,6 +9,8 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    cooldown:
+      default-days: 7
     groups:
       github-actions:
         patterns:
@@ -21,6 +23,8 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
+    cooldown:
+      default-days: 7
     groups:
       nix:
         patterns:
