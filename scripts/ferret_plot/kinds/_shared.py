@@ -59,6 +59,36 @@ def resolve_heatmap_xy(
     return x, y
 
 
+def prepare_grid(
+    sub_df: pd.DataFrame,
+    *,
+    xcol: str,
+    ycol: str,
+    value_col: str,
+    require_complete: bool = False,
+) -> pd.DataFrame:
+    """Pivot one subset to a sorted 2D grid.
+
+    `aggfunc="first"` matches the existing heatmap behavior: duplicate
+    (X, Y) rows from concatenated CSVs remain deterministic instead of
+    being silently averaged.
+    """
+    grid = (
+        sub_df.pivot_table(index=ycol, columns=xcol, values=value_col, aggfunc="first").sort_index().sort_index(axis=1)
+    )
+    if require_complete and grid.isna().to_numpy().any():
+        missing = [
+            f"({xcol}={x}, {ycol}={y})"
+            for y, row in grid.iterrows()
+            for x, value in row.items()
+            if pd.isna(value)
+        ]
+        shown = ", ".join(missing[:5])
+        suffix = "" if len(missing) <= 5 else f", ... ({len(missing)} total)"
+        raise PlotError(f"missing grid cells for surface plot: {shown}{suffix}")
+    return grid
+
+
 def render_heatmap_cell(  # noqa: PLR0913
     ax: Axes,
     sub_df: pd.DataFrame,
@@ -75,9 +105,7 @@ def render_heatmap_cell(  # noqa: PLR0913
     NaN cells render as a flat grey fill so absence is distinguishable
     from valid cells anywhere on the viridis scale.
     """
-    pivot = (
-        sub_df.pivot_table(index=ycol, columns=xcol, values=value_col, aggfunc="first").sort_index().sort_index(axis=1)
-    )
+    pivot = prepare_grid(sub_df, xcol=xcol, ycol=ycol, value_col=value_col)
     data = np.ma.masked_invalid(pivot.values)
     im = ax.imshow(data, aspect="auto", origin="lower", norm=norm, cmap="viridis")
     im.cmap.set_bad(color="lightgrey")
