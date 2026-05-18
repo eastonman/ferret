@@ -107,6 +107,35 @@ def three_axis_df(
     return pd.DataFrame(rows)
 
 
+def tage_capacity_df(
+    *,
+    branch_amounts: tuple[int, ...] = (64, 128, 256, 512),
+    pattern_amounts: tuple[int, ...] = (4, 8, 16),
+    with_freq: bool = True,
+) -> pd.DataFrame:
+    """Synthetic two-axis frame for a TAGE-capacity-style plot."""
+    rows = []
+    for branch_amount in branch_amounts:
+        for pattern_amount in pattern_amounts:
+            ns = 0.4 + branch_amount * 0.002 + pattern_amount * 0.03
+            row = {
+                "benchmark": "synthetic_tage_capacity",
+                "branch_amount": branch_amount,
+                "pattern_amount": pattern_amount,
+                "ticks_min": 1000 + branch_amount * pattern_amount,
+                "ticks_median": 1000 + branch_amount * pattern_amount,
+                "iters": 1,
+                "sites_per_iter": branch_amount,
+                "reps": 7,
+                "ns_per_site_min": ns,
+                "ns_per_site_median": ns,
+            }
+            if with_freq:
+                _add_freq(row, ns, freq_hz=4.0e9)
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def nced_df(
     *,
     depths: tuple[int, ...] = (1, 2, 4, 8, 16),

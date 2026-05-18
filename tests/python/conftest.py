@@ -33,6 +33,7 @@ _KIND_DEFAULTS = {
     "line": {"x": None, "xscale": None, "series": None, "ymax": None},
     "heatmap": {"x": None, "y": None, "logz": False},
     "facets": {"facet": None, "x": None, "y": None, "logz": False},
+    "surface": {"x": None, "y": None, "logz": False, "elev": 30.0, "azim": -60.0},
 }
 
 
