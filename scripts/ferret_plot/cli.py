@@ -21,6 +21,7 @@ from ferret_plot.errors import PlotError
 from ferret_plot.kinds import facets as facets_kind
 from ferret_plot.kinds import heatmap as heatmap_kind
 from ferret_plot.kinds import line as line_kind
+from ferret_plot.kinds import surface as surface_kind
 
 EXIT_USER_ERROR = 2
 
@@ -36,7 +37,7 @@ def _add_common(sp: argparse.ArgumentParser) -> None:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="plot.py",
-        description="Plot a ferret CSV as line, heatmap, or facet grid.",
+        description="Plot a ferret CSV as a line plot, heatmap, facet grid, or 3D surface.",
     )
     sub = ap.add_subparsers(dest="kind", required=True)
 
@@ -59,6 +60,15 @@ def build_parser() -> argparse.ArgumentParser:
     heat.add_argument("--y", default=None, help="Y-axis column")
     heat.add_argument("--logz", action="store_true", help="log color scale")
     heat.set_defaults(handler=heatmap_kind.make_figure)
+
+    surface = sub.add_parser("surface", help="3D surface over two varying axes")
+    _add_common(surface)
+    surface.add_argument("--x", default=None, help="X-axis column")
+    surface.add_argument("--y", default=None, help="Y-axis column")
+    surface.add_argument("--logz", action="store_true", help="log color scale")
+    surface.add_argument("--elev", type=float, default=30.0, help="3D camera elevation angle")
+    surface.add_argument("--azim", type=float, default=-60.0, help="3D camera azimuth angle")
+    surface.set_defaults(handler=surface_kind.make_figure)
 
     fac = sub.add_parser("facets", help="grid of heatmaps over >=3 varying axes")
     _add_common(fac)

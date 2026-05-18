@@ -61,12 +61,13 @@ The runner reports the accepted axes and options before exiting.
 
 ## Plot subcommands
 
-`scripts/plot.py` exposes three rendering kinds; each accepts a CSV
+`scripts/plot.py` exposes four rendering kinds; each accepts a CSV
 produced by `ferret run`.
 
 ```
 python3 scripts/plot.py line     FILE.csv [--x=COL] [--xscale=log|linear] [--out=PATH] [--metric=auto|cycles|ns] [--stat=min|median] [--ymax=N] [--series=COL,...]
 python3 scripts/plot.py heatmap  FILE.csv [--x=COL] [--y=COL] [--out=PATH] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
+python3 scripts/plot.py surface  FILE.csv [--x=COL] [--y=COL] [--out=PATH] [--metric=auto|cycles|ns] [--stat=min|median] [--logz] [--elev=DEG] [--azim=DEG]
 python3 scripts/plot.py facets   FILE.csv --facet=COL [--x=COL] [--y=COL] [--out=PATH] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
 ```
 
@@ -76,6 +77,7 @@ sensible X/Y defaults per benchmark; pass `--x`/`--y` to override (or
 `line` defaults to a log-base-2 X axis (right for `log2_range` sweeps
 like `branches` or `spacing_bytes`); pass `--xscale=linear` for plain
 sweeps such as `nested_call_depth`'s `depth=1..64`, which the registry
-also picks automatically. Use `facets` with `--facet=COL` when a CSV
-has three or more varying axes (future multi-parameter sweeps such as
-a TAGE capacity test).
+also picks automatically. Use `surface` when you want the same two-axis
+data as a 3D surface with color mapped from the selected metric. Use
+`facets` with `--facet=COL` when a CSV has three or more varying axes
+(future multi-parameter sweeps such as a TAGE capacity test).
