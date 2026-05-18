@@ -8,7 +8,10 @@ import pandas as pd
 import pytest
 from ferret_plot import cli
 from ferret_plot.cli import EXIT_USER_ERROR
-from fixtures import dbf_df, dct_df, three_axis_df
+from fixtures import dbf_df, dct_df, tage_capacity_df, three_axis_df
+
+_SURFACE_ELEV_DEFAULT = 30.0
+_SURFACE_AZIM_DEFAULT = -60.0
 
 
 def _write_csv(df, tmp_path: Path, name: str) -> str:
@@ -63,6 +66,53 @@ class TestHeatmapSubcommand:
         )
         assert rc == 0
         assert out_path.exists()
+
+
+class TestSurfaceSubcommand:
+    def test_surface_parser_defaults(self):
+        args = cli.build_parser().parse_args(["surface", "input.csv"])
+        assert args.kind == "surface"
+        assert args.x is None
+        assert args.y is None
+        assert args.logz is False
+        assert args.elev == _SURFACE_ELEV_DEFAULT
+        assert args.azim == _SURFACE_AZIM_DEFAULT
+
+    def test_surface_produces_png(self, tmp_path):
+        csv_path = _write_csv(tage_capacity_df(), tmp_path, "tage.csv")
+        out_path = tmp_path / "surface.png"
+        rc = cli.main(
+            [
+                "surface",
+                csv_path,
+                "--x",
+                "branch_amount",
+                "--y",
+                "pattern_amount",
+                "--out",
+                str(out_path),
+            ]
+        )
+        assert rc == 0
+        assert out_path.exists()
+        assert out_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+
+    def test_surface_invalid_axis_exits_2(self, tmp_path, capsys):
+        csv_path = _write_csv(tage_capacity_df(), tmp_path, "tage.csv")
+        rc = cli.main(
+            [
+                "surface",
+                csv_path,
+                "--x",
+                "not_a_column",
+                "--y",
+                "pattern_amount",
+                "--out",
+                str(tmp_path / "surface.png"),
+            ]
+        )
+        assert rc == EXIT_USER_ERROR
+        assert "not a column" in capsys.readouterr().err
 
 
 class TestFacetsSubcommand:
