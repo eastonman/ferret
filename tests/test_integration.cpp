@@ -122,7 +122,7 @@ TEST(Integration, BranchHistoryFootprintProducesExpectedRowCount) {
   std::string cmd = std::string(FERRET_BINARY) +
                     " run branch_history_footprint"
                     " --branches=1..4 --history_len=4..8"
-                    " --pattern=0"
+                    " --taken_prob_pct=0"
                     " --reps=3 --warmup=1"
                     " --out=" +
                     out.string();
@@ -140,7 +140,7 @@ TEST(Integration, BranchHistoryFootprintHeaderHasExpectedColumns) {
   std::string cmd = std::string(FERRET_BINARY) +
                     " run branch_history_footprint"
                     " --branches=1 --history_len=4"
-                    " --pattern=0 --reps=2 --warmup=1"
+                    " --taken_prob_pct=0 --reps=2 --warmup=1"
                     " --out=" +
                     out.string();
   ASSERT_EQ(0, run(cmd));
@@ -148,7 +148,7 @@ TEST(Integration, BranchHistoryFootprintHeaderHasExpectedColumns) {
   std::string contents = slurp(out.string());
   EXPECT_NE(contents.find("branches"), std::string::npos);
   EXPECT_NE(contents.find("history_len"), std::string::npos);
-  EXPECT_NE(contents.find("pattern"), std::string::npos);
+  EXPECT_NE(contents.find("taken_prob_pct"), std::string::npos);
   EXPECT_NE(contents.find("spacing_bytes"), std::string::npos);
 }
 
@@ -158,7 +158,7 @@ TEST(Integration, BranchHistoryFootprintRandomPatternProducesNonEmptyRows) {
   std::string cmd = std::string(FERRET_BINARY) +
                     " run branch_history_footprint"
                     " --branches=1,2 --history_len=4,8"
-                    " --pattern=1 --seed=7"
+                    " --taken_prob_pct=50 --seed=7"
                     " --reps=3 --warmup=1"
                     " --out=" +
                     out.string();
