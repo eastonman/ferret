@@ -66,8 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
     surface.add_argument("--x", default=None, help="X-axis column")
     surface.add_argument("--y", default=None, help="Y-axis column")
     surface.add_argument("--logz", action="store_true", help="log color scale")
-    surface.add_argument("--elev", type=float, default=30.0, help="3D camera elevation angle")
-    surface.add_argument("--azim", type=float, default=-60.0, help="3D camera azimuth angle")
+    surface.add_argument("--elev", type=float, default=20.0, help="3D camera elevation angle")
+    surface.add_argument("--azim", type=float, default=-13.0, help="3D camera azimuth angle")
     surface.set_defaults(handler=surface_kind.make_figure)
 
     fac = sub.add_parser("facets", help="grid of heatmaps over >=3 varying axes")

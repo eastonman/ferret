@@ -53,7 +53,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> Figure:
     y_positions = np.arange(len(grid.index))
     x_grid, y_grid = np.meshgrid(x_positions, y_positions)
 
-    fig = plt.figure(figsize=(8, 6))
+    fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection="3d")
     surface = ax.plot_surface(
         x_grid,
@@ -67,10 +67,23 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> Figure:
 
     _set_position_ticks(ax.xaxis, list(grid.columns))
     _set_position_ticks(ax.yaxis, list(grid.index))
-    ax.set_xlabel(xcol)
-    ax.set_ylabel(ycol)
-    ax.set_zlabel(metric.label)
-    ax.set_title(f"{bench_name(df)}: {metric.label} surface ({ycol} × {xcol})")
+    ax.set_xlim(len(grid.columns) - 1, 0)
+    ax.set_ylim(0, len(grid.index) - 1)
+    ax.set_xlabel(xcol, fontsize=10, labelpad=8)
+    ax.set_ylabel(ycol, fontsize=10, labelpad=10)
+    ax.set_zlabel(metric.label, fontsize=10, labelpad=8)
+    ax.set_title(f"{bench_name(df)}: {metric.label} surface ({ycol} × {xcol})", fontsize=12, pad=12)
+    ax.set_box_aspect(
+        (
+            max(len(grid.columns), 1) * 1.25,
+            max(len(grid.index), 1) * 1.5,
+            max(len(grid.columns), len(grid.index), 1) * 0.95,
+        )
+    )
     ax.view_init(elev=args.elev, azim=args.azim)
-    fig.colorbar(surface, ax=ax, shrink=0.75, pad=0.12).set_label(metric.label)
+    ax.tick_params(axis="x", labelsize=8, pad=2)
+    ax.tick_params(axis="y", labelsize=8, pad=2)
+    ax.tick_params(axis="z", labelsize=8, pad=2)
+    fig.subplots_adjust(left=0.04, right=0.88, bottom=0.06, top=0.92)
+    fig.colorbar(surface, ax=ax, shrink=0.82, pad=0.06).set_label(metric.label, fontsize=10)
     return fig
