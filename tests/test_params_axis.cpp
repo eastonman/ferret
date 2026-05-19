@@ -140,6 +140,26 @@ TEST(Axis, GeomRangeSamplesPerOctaveAccessor) {
   EXPECT_EQ(Axis::values("x", {1, 2, 3}).samples_per_octave(), 1);
 }
 
+TEST(Axis, ValidateAcceptsAnyValueForRangeAndValues) {
+  auto range_axis = ferret::Axis::range("r", 1, 10);
+  EXPECT_NO_THROW(range_axis.validate(5));
+  EXPECT_NO_THROW(range_axis.validate(-1000));  // Range/Values do not constrain individual values
+  auto vals_axis = ferret::Axis::values("v", {1, 2, 3});
+  EXPECT_NO_THROW(vals_axis.validate(0));
+}
+
+TEST(Axis, ValidateRejectsNonPositiveForLog2RangeAndGeomRange) {
+  auto log2_axis = ferret::Axis::log2_range("L", 1, 1024);
+  EXPECT_THROW(log2_axis.validate(0), std::invalid_argument);
+  EXPECT_THROW(log2_axis.validate(-1), std::invalid_argument);
+  EXPECT_NO_THROW(log2_axis.validate(1));
+
+  auto geom_axis = ferret::Axis::geom_range("g", 1, 1024, 2);
+  EXPECT_THROW(geom_axis.validate(0), std::invalid_argument);
+  EXPECT_THROW(geom_axis.validate(-5), std::invalid_argument);
+  EXPECT_NO_THROW(geom_axis.validate(7));
+}
+
 TEST(Axis, GeomRangeNearInt64MaxExitsCleanly) {
   // lo=2^53, hi=INT64_MAX, k=1: at i=10 the floating multiplication
   // hits exactly 2^63, which is representable as a double but equals
@@ -158,4 +178,43 @@ TEST(Axis, GeomRangeNearInt64MaxExitsCleanly) {
     EXPECT_GE(x, kLo);
     EXPECT_LE(x, kHi);
   }
+}
+
+TEST(Axis, ExpandRangeLinearForRangeKind) {
+  auto a = ferret::Axis::range("r", 0, 10);
+  auto out = a.expand_range(3, 6, std::nullopt);
+  EXPECT_EQ(out, (std::vector<int64_t>{3, 4, 5, 6}));
+}
+
+TEST(Axis, ExpandRangeLog2ForLog2Range) {
+  auto a = ferret::Axis::log2_range("L", 1, 1024);
+  auto out = a.expand_range(2, 16, std::nullopt);
+  EXPECT_EQ(out, (std::vector<int64_t>{2, 4, 8, 16}));
+}
+
+TEST(Axis, ExpandRangeGeomUsesExplicitKWhenProvided) {
+  auto a = ferret::Axis::geom_range("g", 1, 1024, /*samples_per_octave=*/1);
+  // k=2 (explicit) overrides axis default 1.
+  auto out = a.expand_range(1, 4, /*at_k=*/2);
+  // 1, ~1.41 -> rounds to 1 (dedup), 2, ~2.83 -> 3, 4
+  // expected: {1, 2, 3, 4}
+  EXPECT_EQ(out, (std::vector<int64_t>{1, 2, 3, 4}));
+}
+
+TEST(Axis, ExpandRangeGeomFallsBackToAxisKWhenNullopt) {
+  auto a = ferret::Axis::geom_range("g", 1, 8, /*samples_per_octave=*/3);
+  // k=3 from axis default.
+  auto out = a.expand_range(1, 8, std::nullopt);
+  EXPECT_FALSE(out.empty());
+  EXPECT_EQ(out.front(), 1);
+  EXPECT_EQ(out.back(), 8);
+  // 3 samples/octave * 3 octaves + 1 = ~10 distinct values
+  EXPECT_GE(out.size(), 4U);
+}
+
+TEST(Axis, ExpandRangeAtKOnNonGeomThrows) {
+  auto a = ferret::Axis::range("r", 0, 10);
+  EXPECT_THROW(a.expand_range(0, 10, /*at_k=*/2), std::invalid_argument);
+  auto b = ferret::Axis::log2_range("L", 1, 16);
+  EXPECT_THROW(b.expand_range(1, 16, /*at_k=*/2), std::invalid_argument);
 }

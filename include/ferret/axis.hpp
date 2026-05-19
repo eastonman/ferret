@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,8 +49,28 @@ class Axis {
   // expand_geom_range.
   std::vector<int64_t> expand() const;
 
+  // Throws std::invalid_argument when `v` violates the axis kind's
+  // invariants. Log2Range and GeomRange require v > 0; Range and Values
+  // accept any integer. The error message embeds the axis name.
+  void validate(int64_t v) const;
+
+  // Expands a `lo..hi` range token according to this axis's kind. For
+  // GeomRange, `at_k` overrides the axis's declared samples_per_octave
+  // when non-null. For non-GeomRange axes, a non-null `at_k` is an
+  // error (the CLI `@k` suffix is only meaningful for geom axes).
+  // Throws std::invalid_argument on violation; the message embeds the
+  // axis name.
+  std::vector<int64_t> expand_range(int64_t lo, int64_t hi, std::optional<int64_t> at_k) const;
+
  private:
   Axis(std::string name, Kind kind) : name_(std::move(name)), kind_(kind) {}
+
+  // Materializes the inclusive integer interval [lo, hi] with step 1.
+  // Shared by expand() (Kind::Range) and expand_range() (Kind::Range and
+  // Kind::Values, where the CLI `lo..hi` token has no kind-specific
+  // shape).
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+  static std::vector<int64_t> linear_range(int64_t lo, int64_t hi);
 
   std::string name_;
   Kind kind_;

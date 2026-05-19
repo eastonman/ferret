@@ -156,6 +156,7 @@ add_library(ferret_core STATIC
   src/runner.cpp
   src/run_command.cpp
   src/padding.cpp
+  src/parse.cpp
   src/log.cpp
   src/permute.cpp
 )
