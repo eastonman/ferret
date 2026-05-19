@@ -47,17 +47,15 @@ constexpr size_t kMinSiteBytes = 6;
 namespace branch_history_footprint_internal {
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len, int64_t pattern, uint64_t seed) {
+std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len, int64_t taken_prob_pct,
+                                            uint64_t seed) {
   std::vector<uint32_t> flat(branches * history_len, 0U);
-  if (pattern == 0) {
-    return flat;
-  }
   // Mix seed with (branches, history_len) so distinct grid points get
   // distinct fills.
   uint64_t mixed = mix_seed(seed, branches, history_len);
   std::mt19937_64 rng(mixed);
   for (auto& v : flat) {
-    v = static_cast<uint32_t>(rng() & 1U);
+    v = (rng() % 100ULL) < static_cast<uint64_t>(taken_prob_pct) ? 1U : 0U;
   }
   return flat;
 }
@@ -97,7 +95,7 @@ struct BranchHistoryFootprint : Benchmark {
 
   [[nodiscard]] BenchOptions options() const override {
     return {
-        BenchOption{.name = "pattern", .default_value = 1},
+        BenchOption{.name = "taken_prob_pct", .default_value = 50},
         BenchOption{.name = "spacing_bytes", .default_value = 16},
     };
   }
@@ -115,7 +113,7 @@ struct BranchHistoryFootprint : Benchmark {
 void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {
   auto branches = p.get<size_t>("branches");
   auto history_len = p.get<size_t>("history_len");
-  auto pattern = p.get<int64_t>("pattern");
+  auto taken_prob_pct = p.get<int64_t>("taken_prob_pct");
   auto spacing = p.get<size_t>("spacing_bytes");
   auto seed = static_cast<uint64_t>(p.get<int64_t>("seed"));
 
@@ -128,8 +126,9 @@ void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {
   if (history_len < 1) {
     throw std::invalid_argument("history_len must be >= 1");
   }
-  if (pattern != 0 && pattern != 1) {
-    throw std::invalid_argument("pattern must be 0 (zero) or 1 (random); got " + std::to_string(pattern));
+  if (taken_prob_pct < 0 || taken_prob_pct > 100) {
+    throw std::invalid_argument("taken_prob_pct must be in [0, 100]; got " +
+                                std::to_string(taken_prob_pct));
   }
   if (spacing < kMinSiteBytes) {
     throw std::invalid_argument("spacing_bytes=" + std::to_string(spacing) +
@@ -139,7 +138,7 @@ void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {
 
   size_t iters = iterations(p);
 
-  flat_ = branch_history_footprint_internal::generate_pattern_fill(branches, history_len, pattern, seed);
+  flat_ = branch_history_footprint_internal::generate_pattern_fill(branches, history_len, taken_prob_pct, seed);
 
   // sljit prologue: 3 scratches + 2 saveds.
   // SLJIT_S0 = flat_base, SLJIT_S1 = hist_idx, SLJIT_R0 = iter counter.

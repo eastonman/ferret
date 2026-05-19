@@ -13,7 +13,8 @@ extern "C" {
 
 namespace ferret::branch_history_footprint_internal {
 // Exposed for unit testing; defined in benchmarks/branch_history_footprint.cpp.
-std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len, int64_t pattern, uint64_t seed);
+std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len, int64_t taken_prob_pct,
+                                            uint64_t seed);
 struct LayoutSnapshot {
   std::vector<sljit_label*> labels;
   size_t branches;
@@ -29,11 +30,12 @@ TEST(BranchHistoryFootprint, RegistryLookupReturnsBenchmark) {
 }
 
 namespace {
-ferret::Params make_params(int64_t branches, int64_t history_len, int64_t pattern = 1, int64_t spacing = 16) {
+ferret::Params make_params(int64_t branches, int64_t history_len, int64_t taken_prob_pct = 50,
+                           int64_t spacing = 16) {
   ferret::Params p;
   p.set("branches", branches);
   p.set("history_len", history_len);
-  p.set("pattern", pattern);
+  p.set("taken_prob_pct", taken_prob_pct);
   p.set("spacing_bytes", spacing);
   p.set("seed", 1);
   return p;
@@ -96,15 +98,15 @@ TEST(BranchHistoryFootprint, IterationsAmortizesAtTenMillionSites) {
   EXPECT_EQ(b->iterations(make_params(10'000'001, 4)), 1u);  // clamped at >=1
 }
 
-TEST(BranchHistoryFootprint, ExposesPatternAndSpacingBytesOptions) {
+TEST(BranchHistoryFootprint, ExposesTakenProbPctAndSpacingBytesOptions) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   auto opts = b->options();
   ASSERT_EQ(opts.size(), 2u);
 
-  const auto* pattern = find_option(opts, "pattern");
-  ASSERT_NE(pattern, nullptr);
-  EXPECT_EQ(pattern->default_value, 1);  // random
+  const auto* prob = find_option(opts, "taken_prob_pct");
+  ASSERT_NE(prob, nullptr);
+  EXPECT_EQ(prob->default_value, 50);
 
   const auto* spacing = find_option(opts, "spacing_bytes");
   ASSERT_NE(spacing, nullptr);
@@ -116,7 +118,7 @@ TEST(BranchHistoryFootprint, RejectsSpacingBytesTooSmall) {
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
   // Min site is 8 bytes on AArch64, 6 on x86_64. 4 is below both.
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/1, /*spacing=*/4)), std::invalid_argument);
+  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*taken_prob_pct=*/50, /*spacing=*/4)), std::invalid_argument);
 }
 
 TEST(BranchHistoryFootprint, RejectsZeroBranches) {
@@ -133,37 +135,47 @@ TEST(BranchHistoryFootprint, RejectsZeroHistoryLen) {
   EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 0)), std::invalid_argument);
 }
 
-TEST(BranchHistoryFootprint, RejectsInvalidPattern) {
+TEST(BranchHistoryFootprint, RejectsOutOfRangeProbability) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
-  CompilerHandle ch;
-  EXPECT_THROW(b->emit_kernel(ch.c, make_params(1, 4, /*pattern=*/2)), std::invalid_argument);
+  CompilerHandle ch_lo;
+  EXPECT_THROW(b->emit_kernel(ch_lo.c, make_params(1, 4, /*taken_prob_pct=*/-1)),
+               std::invalid_argument);
+  CompilerHandle ch_hi;
+  EXPECT_THROW(b->emit_kernel(ch_hi.c, make_params(1, 4, /*taken_prob_pct=*/101)),
+               std::invalid_argument);
 }
 
-TEST(BranchHistoryFootprint, ZeroPatternProducesAllZeros) {
+TEST(BranchHistoryFootprint, ZeroProbabilityProducesAllZeros) {
   auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(
-      /*branches=*/4, /*history_len=*/8, /*pattern=*/0, /*seed=*/1);
+      /*branches=*/4, /*history_len=*/8, /*taken_prob_pct=*/0, /*seed=*/1);
   ASSERT_EQ(v.size(), 32u);
   for (uint32_t x : v) EXPECT_EQ(x, 0u);
 }
 
+TEST(BranchHistoryFootprint, HundredProbabilityProducesAllOnes) {
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(
+      /*branches=*/4, /*history_len=*/8, /*taken_prob_pct=*/100, /*seed=*/1);
+  ASSERT_EQ(v.size(), 32u);
+  for (uint32_t x : v) EXPECT_EQ(x, 1u);
+}
+
 TEST(BranchHistoryFootprint, RandomPatternIsDeterministicForSameSeed) {
-  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
-  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 50, 42);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 50, 42);
   EXPECT_EQ(a, b);
 }
 
 TEST(BranchHistoryFootprint, RandomPatternDiffersBetweenSeeds) {
-  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 42);
-  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 43);
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 50, 42);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 50, 43);
   EXPECT_NE(a, b);
 }
 
 TEST(BranchHistoryFootprint, RandomPatternDiffersByParamPoint) {
   // Seed mix includes (branches, history_len), so different points diverge.
-  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(4, 16, 1, 1);
-  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 1, 1);
-  // Different sizes → not directly comparable; check that the prefix differs.
+  auto a = ferret::branch_history_footprint_internal::generate_pattern_fill(4, 16, 50, 1);
+  auto b = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 16, 50, 1);
   size_t common = std::min(a.size(), b.size());
   bool any_diff = false;
   for (size_t i = 0; i < common; ++i) {
@@ -176,10 +188,38 @@ TEST(BranchHistoryFootprint, RandomPatternDiffersByParamPoint) {
 }
 
 TEST(BranchHistoryFootprint, RandomPatternValuesAreZeroOrOne) {
-  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 32, 1, 7);
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(8, 32, 50, 7);
   for (uint32_t x : v) {
     EXPECT_TRUE(x == 0u || x == 1u) << "value out of {0,1}: " << x;
   }
+}
+
+TEST(BranchHistoryFootprint, MidProbabilityRoughlyHalfTaken) {
+  // 100 x 100 = 10 000 cells. 1 sigma ~ 0.005 at p=0.5; [0.45, 0.55] is
+  // a ~10 sigma window — a flat-out broken Bernoulli is what this
+  // catches, not statistical edges.
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(
+      /*branches=*/100, /*history_len=*/100, /*taken_prob_pct=*/50, /*seed=*/12345);
+  ASSERT_EQ(v.size(), 10'000u);
+  size_t taken = 0;
+  for (uint32_t x : v) taken += x;
+  double rate = static_cast<double>(taken) / static_cast<double>(v.size());
+  EXPECT_GE(rate, 0.45) << "empirical taken-rate too low: " << rate;
+  EXPECT_LE(rate, 0.55) << "empirical taken-rate too high: " << rate;
+}
+
+TEST(BranchHistoryFootprint, AsymmetricProbabilityMatchesRequestedRate) {
+  // Distinct from the p=50 case: a wrong-direction comparison (<=) or
+  // a complement-of-p bug (using 100-p) gives ~0.75 instead of ~0.25,
+  // well outside the [0.20, 0.30] window.
+  auto v = ferret::branch_history_footprint_internal::generate_pattern_fill(
+      /*branches=*/100, /*history_len=*/100, /*taken_prob_pct=*/25, /*seed=*/12345);
+  ASSERT_EQ(v.size(), 10'000u);
+  size_t taken = 0;
+  for (uint32_t x : v) taken += x;
+  double rate = static_cast<double>(taken) / static_cast<double>(v.size());
+  EXPECT_GE(rate, 0.20) << "empirical taken-rate too low: " << rate;
+  EXPECT_LE(rate, 0.30) << "empirical taken-rate too high: " << rate;
 }
 
 TEST(BranchHistoryFootprint, EmitsValidKernelForSmallParams) {
@@ -187,7 +227,7 @@ TEST(BranchHistoryFootprint, EmitsValidKernelForSmallParams) {
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
   auto p = make_params(/*branches=*/4, /*history_len=*/8,
-                       /*pattern=*/1, /*spacing=*/16);
+                       /*taken_prob_pct=*/50, /*spacing=*/16);
   ASSERT_NO_THROW(b->emit_kernel(ch.c, p));
   ASSERT_EQ(sljit_get_compiler_error(ch.c), SLJIT_SUCCESS);
 
@@ -203,7 +243,7 @@ TEST(BranchHistoryFootprint, LayoutSnapshotMeetsMinimumSpacing) {
   ASSERT_NE(b, nullptr);
   CompilerHandle ch;
   b->emit_kernel(ch.c, make_params(/*branches=*/4, /*history_len=*/4,
-                                   /*pattern=*/0, /*spacing=*/16));
+                                   /*taken_prob_pct=*/0, /*spacing=*/16));
   void* code = sljit_generate_code(ch.c, 0, nullptr);
   ASSERT_NE(code, nullptr);
   b->verify_layout(ch.c);
