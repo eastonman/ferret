@@ -1,17 +1,18 @@
-"""Line+series plot. Same visual output as the original plot.py for 1-axis CSVs."""
+"""Line+series plot (plotly backend)."""
 
 from __future__ import annotations
 
 import argparse
 
-import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.figure import Figure
+import plotly.graph_objects as go
 
 from ferret_plot.columns import bench_name, resolve_metric, varying_axis_columns
 from ferret_plot.errors import PlotError
-from ferret_plot.formatting import apply_axis
+from ferret_plot.formatting import decimate_indices, human_readable
 from ferret_plot.registry import BenchmarkDefaults, resolve_defaults
+
+_SCATTERGL_POINT_THRESHOLD = 5000
 
 
 def _resolve_x(df: pd.DataFrame, args: argparse.Namespace, defaults: BenchmarkDefaults) -> str:
@@ -39,28 +40,66 @@ def _resolve_series(df: pd.DataFrame, args: argparse.Namespace, xcol: str) -> li
     return [c for c in varying_axis_columns(df) if c != xcol]
 
 
-def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> Figure:
+def _trace_cls(total_points: int):
+    return go.Scattergl if total_points > _SCATTERGL_POINT_THRESHOLD else go.Scatter
+
+
+def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     metric = resolve_metric(df, metric=args.metric, stat=args.stat)
     defaults = resolve_defaults(df, override=args.benchmark)
     xcol = _resolve_x(df, args, defaults)
     series_cols = _resolve_series(df, args, xcol)
-    # Explicit CLI flag > registry hint > project default.
     xscale = args.xscale or defaults.line_xscale or "log"
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    total_points = len(df)
+    cls = _trace_cls(total_points)
+
+    traces: list[go.BaseTraceType] = []
     if series_cols:
         for keys, sub in df.groupby(series_cols):
             label_keys = keys if isinstance(keys, tuple) else (keys,)
             label = ", ".join(f"{c}={v}" for c, v in zip(series_cols, label_keys, strict=True))
-            ax.plot(sub[xcol], sub[metric.column], marker="o", markersize=2, linewidth=1.0, label=label)
-        ax.legend()
+            traces.append(
+                cls(
+                    x=sub[xcol],
+                    y=sub[metric.column],
+                    mode="lines+markers",
+                    marker=dict(size=4),
+                    line=dict(width=1.5),
+                    name=label,
+                )
+            )
     else:
-        ax.plot(df[xcol], df[metric.column], marker="o", markersize=2, linewidth=1.0)
+        traces.append(
+            cls(
+                x=df[xcol],
+                y=df[metric.column],
+                mode="lines+markers",
+                marker=dict(size=4),
+                line=dict(width=1.5),
+            )
+        )
 
-    apply_axis(ax.xaxis, df[xcol].unique(), scale=xscale)
-    ax.set_xlabel(xcol)
-    ax.set_ylabel(metric.label)
-    ax.set_ylim(bottom=0, top=args.ymax)
-    ax.set_title(f"{bench_name(df)}: {metric.label} vs {xcol}")
-    ax.grid(True, which="both", linestyle="--", alpha=0.4)
+    unique_x = sorted(df[xcol].dropna().unique())
+    kept = decimate_indices(unique_x)
+    tickvals = [unique_x[i] for i in kept]
+    ticktext = [human_readable(unique_x[i]) for i in kept]
+
+    fig = go.Figure(data=traces)
+    fig.update_layout(
+        title=f"{bench_name(df)}: {metric.label} vs {xcol}",
+        xaxis=dict(
+            title=xcol,
+            type=("log" if xscale == "log" else "linear"),
+            tickvals=tickvals,
+            ticktext=ticktext,
+        ),
+        yaxis=dict(
+            title=metric.label,
+            range=[0, args.ymax] if args.ymax is not None else None,
+            rangemode="tozero",
+        ),
+        showlegend=bool(series_cols),
+        margin=dict(l=60, r=20, t=60, b=60),
+    )
     return fig

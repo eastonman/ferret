@@ -1,4 +1,5 @@
 # Runtime deps for scripts/ — Nix users: see flake.nix.
-matplotlib
 numpy
 pandas
+plotly>=6.1.1
+kaleido>=1.0

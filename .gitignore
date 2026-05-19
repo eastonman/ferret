@@ -69,6 +69,7 @@ Testing/
 .cache/
 *.csv
 *.png
+*.html
 
 # AI Agent and Orchestration
 .humanize/
@@ -107,3 +108,4 @@ venv/
 env/
 ENV/
 .ipynb_checkpoints/
+uv.lock

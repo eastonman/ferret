@@ -24,26 +24,31 @@
         formatter = pkgs.nixfmt-rfc-style;
 
         devShells.default = pkgs.mkShell {
-          packages = [
-            pkgs.cmake
-            pkgs.ninja
-            pkgs.clang
-            pkgs.clang-tools
-            pkgs.cli11
-            pkgs.gtest
-            pkgs.ruff
-            pkgs.spdlog
-            sljit
-            (pkgs.python3.withPackages (
-              ps:
-                with ps; [
-                  matplotlib
-                  numpy
-                  pandas
-                  pytest
-                ]
-            ))
-          ];
+          packages =
+            [
+              pkgs.cmake
+              pkgs.ninja
+              pkgs.clang
+              pkgs.clang-tools
+              pkgs.cli11
+              pkgs.gtest
+              pkgs.ruff
+              pkgs.spdlog
+              sljit
+              (pkgs.python3.withPackages (
+                ps:
+                  with ps; [
+                    numpy
+                    pandas
+                    plotly
+                    kaleido # nixpkgs-25.11 ships 0.2.1; run `pip install --user 'kaleido>=1.0'` for v1
+                    pytest
+                  ]
+              ))
+            ]
+            ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+              pkgs.chromium
+            ];
         };
 
         packages.default = pkgs.callPackage ./nix/ferret.nix {

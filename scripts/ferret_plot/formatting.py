@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import math
 import numbers
-from collections.abc import Iterable, Sequence
-
-import matplotlib.ticker as mticker
-from matplotlib.axis import Axis
+from collections.abc import Sequence
 
 # Soft caps on explicit ticks at the figure widths we use (figsize 8" / 4"
 # per cell). Generic data hits the lower cap once K/M/G suffixing widens
@@ -81,28 +78,3 @@ def human_readable(x, _pos: int | None = None) -> str:
         if x >= scale:
             return f"{x / scale:g}{unit}"
     return f"{x:g}"
-
-
-def apply_axis(axis: Axis, values: Iterable[float], *, scale: str = "log") -> None:
-    """Configure a matplotlib axis for a sweep.
-
-    scale='log' applies log base 2 with explicit ticks at the unique sweep
-    values; matplotlib's auto-log-base-2 ticking is poor for the small
-    power-of-2 ranges ferret typically produces, so we set them manually.
-
-    scale='linear' uses matplotlib's default linear scale with auto-ticking,
-    suitable for non-power-of-2 sweeps (e.g. nested_call_depth's
-    depth=1..64). The human_readable formatter is preserved so K/M/G
-    suffixing stays consistent across plot kinds.
-    """
-    if scale == "log":
-        # axis_name is matplotlib's stable 'x'/'y' discriminator across
-        # XAxis/YAxis subclasses; safer than passing a separate flag.
-        if axis.axis_name == "x":
-            axis.axes.set_xscale("log", base=2)
-        else:
-            axis.axes.set_yscale("log", base=2)
-        sorted_values = sorted(values)
-        axis.set_ticks([sorted_values[i] for i in decimate_indices(sorted_values)])
-        axis.set_minor_formatter(mticker.NullFormatter())
-    axis.set_major_formatter(mticker.FuncFormatter(human_readable))
