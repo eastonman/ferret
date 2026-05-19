@@ -21,4 +21,8 @@ std::vector<size_t> sattolo_cycle(size_t n, uint64_t seed) {
   return next;
 }
 
+uint64_t mix_seed(uint64_t seed, uint64_t x, uint64_t y) {
+  return seed ^ (x * 0x9E3779B97F4A7C15ULL) ^ (y * 0xBF58476D1CE4E5B9ULL);
+}
+
 }  // namespace ferret

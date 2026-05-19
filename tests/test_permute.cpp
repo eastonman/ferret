@@ -82,3 +82,18 @@ TEST(Permute, NoFixedPoint) {
     }
   }
 }
+
+TEST(Permute, MixSeedDiffersForDifferentTuples) {
+  uint64_t a = ferret::mix_seed(42, 100, 200);
+  uint64_t b = ferret::mix_seed(42, 100, 201);
+  uint64_t c = ferret::mix_seed(42, 101, 200);
+  uint64_t d = ferret::mix_seed(43, 100, 200);
+  EXPECT_NE(a, b);
+  EXPECT_NE(a, c);
+  EXPECT_NE(a, d);
+  EXPECT_NE(b, c);
+}
+
+TEST(Permute, MixSeedDeterministic) {
+  EXPECT_EQ(ferret::mix_seed(42, 100, 200), ferret::mix_seed(42, 100, 200));
+}
