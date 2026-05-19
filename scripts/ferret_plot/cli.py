@@ -10,13 +10,9 @@ from __future__ import annotations
 import argparse
 import sys
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib.figure import Figure
 
+from ferret_plot import output
 from ferret_plot.errors import PlotError
 from ferret_plot.kinds import facets as facets_kind
 from ferret_plot.kinds import heatmap as heatmap_kind
@@ -28,7 +24,20 @@ EXIT_USER_ERROR = 2
 
 def _add_common(sp: argparse.ArgumentParser) -> None:
     sp.add_argument("csv")
-    sp.add_argument("--out", default=None, help="output image path; omitted = plt.show()")
+    sp.add_argument("--out", default=None, help="output image path; omitted = open HTML in browser")
+    sp.add_argument(
+        "--format",
+        default=None,
+        choices=["html", "png", "svg", "pdf", "jpg", "webp"],
+        help="output format override (default: infer from --out extension)",
+    )
+    sp.add_argument(
+        "--html-js",
+        dest="html_js",
+        default="cdn",
+        choices=["cdn", "inline", "sibling"],
+        help="how to bundle plotly.js in HTML output (default: cdn)",
+    )
     sp.add_argument("--benchmark", default=None, help="override registry lookup (rare)")
     sp.add_argument("--metric", default="auto", choices=["auto", "cycles", "ns"])
     sp.add_argument("--stat", default="min", choices=["min", "median"])
@@ -59,6 +68,7 @@ def build_parser() -> argparse.ArgumentParser:
     heat.add_argument("--x", default=None, help="X-axis column")
     heat.add_argument("--y", default=None, help="Y-axis column")
     heat.add_argument("--logz", action="store_true", help="log color scale")
+    heat.add_argument("--cmap", default="turbo", help="colorscale name (default: turbo, high-contrast)")
     heat.set_defaults(handler=heatmap_kind.make_figure)
 
     surface = sub.add_parser("surface", help="3D surface over two varying axes")
@@ -67,7 +77,8 @@ def build_parser() -> argparse.ArgumentParser:
     surface.add_argument("--y", default=None, help="Y-axis column")
     surface.add_argument("--logz", action="store_true", help="log color scale")
     surface.add_argument("--elev", type=float, default=20.0, help="3D camera elevation angle")
-    surface.add_argument("--azim", type=float, default=-13.0, help="3D camera azimuth angle")
+    surface.add_argument("--azim", type=float, default=-2.0, help="3D camera azimuth angle")
+    surface.add_argument("--cmap", default="turbo", help="colorscale name (default: turbo, high-contrast perceptual)")
     surface.set_defaults(handler=surface_kind.make_figure)
 
     fac = sub.add_parser("facets", help="grid of heatmaps over >=3 varying axes")
@@ -76,17 +87,10 @@ def build_parser() -> argparse.ArgumentParser:
     fac.add_argument("--x", default=None, help="X-axis column (per subplot)")
     fac.add_argument("--y", default=None, help="Y-axis column (per subplot)")
     fac.add_argument("--logz", action="store_true", help="log color scale")
+    fac.add_argument("--cmap", default="turbo", help="colorscale name (default: turbo, high-contrast)")
     fac.set_defaults(handler=facets_kind.make_figure)
 
     return ap
-
-
-def _emit(fig: Figure, out: str | None) -> None:
-    if out:
-        fig.savefig(out, bbox_inches="tight", dpi=400)
-        plt.close(fig)
-    else:
-        plt.show()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -94,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         df = pd.read_csv(args.csv)
         fig = args.handler(df, args)
-        _emit(fig, args.out)
+        output.emit(fig, out=args.out, fmt=args.format, html_js=args.html_js)
         return 0
     except (PlotError, FileNotFoundError) as e:
         print(f"plot.py: {e}", file=sys.stderr)

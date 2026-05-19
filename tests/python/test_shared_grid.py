@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
 import pytest
 from ferret_plot.errors import PlotError
-from ferret_plot.kinds._shared import prepare_grid
+from ferret_plot.kinds._shared import build_heatmap_trace, prepare_grid
 from fixtures import dbf_df
 
 _MISSING_BRANCH = 2
@@ -56,3 +59,59 @@ class TestPrepareGrid:
                 value_col="cycles_per_site_min",
                 require_complete=True,
             )
+
+
+class TestBuildHeatmapTrace:
+    def test_returns_heatmap_trace(self):
+        grid = pd.DataFrame(
+            [[1.0, 2.0], [3.0, 4.0]],
+            index=[10, 20],
+            columns=[100, 200],
+        )
+        trace = build_heatmap_trace(grid, xcol="cols", ycol="rows", value_label="cycles", logz=False, cmap="Viridis")
+        assert isinstance(trace, go.Heatmap)
+        # Cells are placed at uniform index positions so log2 / power-of-2
+        # sweeps render evenly; the caller adds tickvals/ticktext labels.
+        assert list(trace.x) == [0, 1]
+        assert list(trace.y) == [0, 1]
+        np.testing.assert_array_equal(np.array(trace.z), grid.to_numpy())
+        assert trace.colorscale is not None
+        # Hover text carries the real axis values per cell.
+        text = trace.text
+        assert "cols=100" in text[0][0]
+        assert "rows=10" in text[0][0]
+
+    def test_logz_pre_transforms_z(self):
+        grid = pd.DataFrame([[1.0, 10.0], [100.0, 1000.0]], index=[0, 1], columns=[0, 1])
+        trace = build_heatmap_trace(grid, xcol="c", ycol="r", value_label="cycles", logz=True, cmap="Viridis")
+        np.testing.assert_allclose(np.array(trace.z), np.log10(grid.to_numpy()))
+
+    def test_coloraxis_attaches_to_shared_axis(self):
+        grid = pd.DataFrame([[1.0]], index=[0], columns=[0])
+        trace = build_heatmap_trace(
+            grid,
+            xcol="c",
+            ycol="r",
+            value_label="cycles",
+            logz=False,
+            cmap="Viridis",
+            coloraxis="coloraxis",
+        )
+        assert trace.coloraxis == "coloraxis"
+        # When attached to a shared coloraxis, the per-trace colorscale is not set.
+        assert trace.colorscale is None
+
+    def test_explicit_cmin_cmax_passed_through(self):
+        grid = pd.DataFrame([[1.0, 2.0]], index=[0], columns=[0, 1])
+        trace = build_heatmap_trace(
+            grid,
+            xcol="c",
+            ycol="r",
+            value_label="cycles",
+            logz=False,
+            cmap="Viridis",
+            cmin=0.5,
+            cmax=2.5,
+        )
+        assert trace.zmin == 0.5
+        assert trace.zmax == 2.5

@@ -6,5 +6,14 @@ required-version = ">=0.14"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "PL"]
 
+[tool.ruff.lint.per-file-ignores]
+# Magic numbers in test assertions are clearer inline than via constants.
+"tests/python/*.py" = ["PLR2004"]
+
 [tool.ruff.format]
 # defaults are fine; keep this section as a marker
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: hits real external tooling (Chrome/kaleido)",
+]

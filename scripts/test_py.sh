@@ -6,4 +6,4 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-exec python3 -m pytest tests/python "$@"
+exec python3 -m pytest tests/python -m "not integration" "$@"

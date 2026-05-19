@@ -48,15 +48,27 @@ build/ferret run direct_branch_footprint --core=3 \
     --branches=1..32768 --spacing_bytes=16..128 \
     --freq=4.521GHz --out=/tmp/btb.csv
 
-# Step 3: line plot — picks cycles_per_site automatically because freq was set.
+# Step 3: line plot. Default --out=*.png writes a static image
+# (requires Chrome for kaleido; the Nix dev shell provides it on Linux).
 python3 scripts/plot.py line /tmp/btb.csv --out=/tmp/btb.png
 
+# Or write interactive HTML (rotate, zoom, hover for exact values):
+python3 scripts/plot.py line /tmp/btb.csv --out=/tmp/btb.html
+
 # Or with spacing_bytes on X (branches becomes the legend):
-python3 scripts/plot.py line /tmp/btb.csv --x=spacing_bytes --out=/tmp/btb-by-spacing.png
+python3 scripts/plot.py line /tmp/btb.csv --x=spacing_bytes --out=/tmp/btb-by-spacing.html
 
 # Or as a 2D heatmap (branches × spacing_bytes, cycles per site as color):
-python3 scripts/plot.py heatmap /tmp/btb.csv --out=/tmp/btb-heatmap.png
+python3 scripts/plot.py heatmap /tmp/btb.csv --out=/tmp/btb-heatmap.html
 ```
+
+Static image formats (`.png` / `.svg` / `.pdf` / `.jpg` / `.webp`)
+require Chrome or Chromium on PATH so kaleido can run a headless
+export. The Nix dev shell ships `pkgs.chromium` on Linux; on macOS
+or non-Nix systems install Chrome via your package manager or run
+`python -m plotly.io._kaleido install_chrome`. HTML output has no
+such requirement and is the default when `--out` is omitted (a temp
+file opens in the system browser).
 
 CLI flags and axis syntax: [`docs/cli.md`](docs/cli.md).
 
