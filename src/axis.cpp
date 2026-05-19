@@ -54,14 +54,19 @@ Axis Axis::values(std::string name, std::vector<int64_t> vs) {
   return a;
 }
 
-std::vector<int64_t> Axis::expand() const {
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+std::vector<int64_t> Axis::linear_range(int64_t lo, int64_t hi) {
   std::vector<int64_t> out;
+  for (int64_t v = lo; v <= hi; ++v) {
+    out.push_back(v);
+  }
+  return out;
+}
+
+std::vector<int64_t> Axis::expand() const {
   switch (kind_) {
     case Kind::Range:
-      for (int64_t v = lo_; v <= hi_; ++v) {
-        out.push_back(v);
-      }
-      return out;
+      return linear_range(lo_, hi_);
     case Kind::Log2Range:
       return expand_log2_range(lo_, hi_, "Axis '" + name_ + "'");
     case Kind::GeomRange:
@@ -69,7 +74,30 @@ std::vector<int64_t> Axis::expand() const {
     case Kind::Values:
       return values_;
   }
-  return out;
+  return {};
+}
+
+void Axis::validate(int64_t v) const {
+  if ((kind_ == Kind::Log2Range || kind_ == Kind::GeomRange) && v <= 0) {
+    throw std::invalid_argument("axis '" + name_ + "' requires positive values: " + std::to_string(v));
+  }
+}
+
+std::vector<int64_t> Axis::expand_range(int64_t lo, int64_t hi, std::optional<int64_t> at_k) const {
+  if (at_k.has_value() && kind_ != Kind::GeomRange) {
+    throw std::invalid_argument("axis '" + name_ + "': @k is only valid for geom_range axes");
+  }
+  std::string context = "Axis '" + name_ + "'";
+  switch (kind_) {
+    case Kind::GeomRange:
+      return expand_geom_range(lo, hi, at_k.value_or(k_), context);
+    case Kind::Log2Range:
+      return expand_log2_range(lo, hi, context);
+    case Kind::Range:
+    case Kind::Values:
+      return linear_range(lo, hi);
+  }
+  return {};
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

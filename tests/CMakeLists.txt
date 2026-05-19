@@ -139,6 +139,14 @@ target_link_libraries(test_freq PRIVATE
 )
 gtest_discover_tests(test_freq)
 
+add_executable(test_parse test_parse.cpp)
+target_link_libraries(test_parse PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+  ferret_warnings
+)
+gtest_discover_tests(test_parse)
+
 add_executable(test_integration test_integration.cpp)
 target_compile_definitions(test_integration PRIVATE
   FERRET_BINARY="$<TARGET_FILE:ferret>"
