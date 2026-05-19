@@ -139,6 +139,33 @@ else()
   add_library(sljit::sljit ALIAS sljit_static)
 endif()
 
+set(ferret_arch_timing_src "")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)")
+  set(ferret_arch_timing_src src/timing/x86_64.cpp)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
+  set(ferret_arch_timing_src src/timing/aarch64.cpp)
+else()
+  message(FATAL_ERROR "ferret: unsupported CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}' "
+                      "(supported: x86_64, aarch64)")
+endif()
+
+set(ferret_os_pinning_src "")
+if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
+  set(ferret_os_pinning_src src/pinning/linux.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(ferret_os_pinning_src src/pinning/macos.cpp)
+else()
+  message(FATAL_ERROR "ferret: unsupported CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}' "
+                      "(supported: Linux, Android, Darwin)")
+endif()
+
+set(ferret_arch_padding_src "")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)")
+  set(ferret_arch_padding_src src/padding/x86_64.cpp)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
+  set(ferret_arch_padding_src src/padding/aarch64.cpp)
+endif()
+
 add_library(ferret_core STATIC
   src/axis.cpp
   src/params.cpp
@@ -146,16 +173,14 @@ add_library(ferret_core STATIC
   src/cli_axis.cpp
   src/freq.cpp
   src/jit.cpp
-  src/timing/x86_64.cpp
-  src/timing/aarch64.cpp
+  ${ferret_arch_timing_src}
   src/timing/calibrate.cpp
-  src/pinning/linux.cpp
-  src/pinning/macos.cpp
+  ${ferret_os_pinning_src}
   src/benchmark_registry.cpp
   src/csv.cpp
   src/runner.cpp
   src/run_command.cpp
-  src/padding.cpp
+  ${ferret_arch_padding_src}
   src/parse.cpp
   src/log.cpp
   src/permute.cpp
