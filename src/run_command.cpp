@@ -35,32 +35,24 @@ std::optional<ClassifiedOverrides> classify_overrides(const std::string& bench_n
                                                       const BenchOptions& options,
                                                       const std::map<std::string, std::string>& raw) {
   ClassifiedOverrides out;
+  std::map<std::string, const Axis*> axis_by_name;
+  std::map<std::string, const BenchOption*> option_by_name;
+  for (const auto& a : axes) {
+    axis_by_name.emplace(a.name(), &a);
+  }
   for (const auto& o : options) {
+    option_by_name.emplace(o.name, &o);
     out.option_values[o.name] = o.default_value;
   }
   for (const auto& [k, v] : raw) {
-    const Axis* axis_match = nullptr;
-    for (const auto& a : axes) {
-      if (a.name() == k) {
-        axis_match = &a;
-        break;
-      }
-    }
-    const BenchOption* opt_match = nullptr;
-    for (const auto& o : options) {
-      if (o.name == k) {
-        opt_match = &o;
-        break;
-      }
-    }
-    if (axis_match != nullptr) {
+    if (auto axis_it = axis_by_name.find(k); axis_it != axis_by_name.end()) {
       try {
-        out.axis_values[k] = parse_cli_axis_value(v, *axis_match);
+        out.axis_values[k] = parse_cli_axis_value(v, *axis_it->second);
       } catch (const std::exception& e) {
         flog::error("invalid value for --{}: {}", k, e.what());
         return std::nullopt;
       }
-    } else if (opt_match != nullptr) {
+    } else if (auto opt_it = option_by_name.find(k); opt_it != option_by_name.end()) {
       try {
         out.option_values[k] = parse_option_value(v);
       } catch (const std::exception& e) {
@@ -168,21 +160,24 @@ void emit_csv(std::ostream& out, const std::string& bench_name, const std::vecto
   out.flush();
 }
 
-}  // namespace
+struct RunInputs {
+  std::unique_ptr<Benchmark> bench;
+  std::vector<Params> rows;
+  std::vector<std::string> cols;
+};
 
-int run(const RunOptions& opts) {
+std::optional<RunInputs> build_run_inputs(const RunOptions& opts) {
   auto bench = BenchmarkRegistry::create(opts.name);
   if (!bench) {
     flog::error("unknown benchmark '{}'. Try `ferret list`.", opts.name);
-    return 2;
+    return std::nullopt;
   }
-
   SweepAxes axes = bench->axes();
   BenchOptions options = bench->options();
 
   auto classified = classify_overrides(opts.name, axes, options, opts.overrides);
   if (!classified) {
-    return 2;
+    return std::nullopt;
   }
 
   std::vector<Params> rows;
@@ -190,10 +185,26 @@ int run(const RunOptions& opts) {
     rows = sweep::expand(axes, classified->axis_values);
   } catch (const std::exception& e) {
     flog::error("invalid sweep: {}", e.what());
+    return std::nullopt;
+  }
+  inject_options(rows, classified->option_values, opts.seed);
+
+  auto cols = column_names(axes, options);
+  return RunInputs{
+      .bench = std::move(bench),
+      .rows = std::move(rows),
+      .cols = std::move(cols),
+  };
+}
+
+}  // namespace
+
+int run(const RunOptions& opts) {
+  auto inputs = build_run_inputs(opts);
+  if (!inputs) {
     return 2;
   }
 
-  inject_options(rows, classified->option_values, opts.seed);
   apply_pinning(opts.core);
 
   std::ofstream ofs;
@@ -202,20 +213,18 @@ int run(const RunOptions& opts) {
     return 2;
   }
 
-  // Non-finite tpns would propagate NaN into CSV.
   double tpns = timing::ticks_per_ns();
   if (!std::isfinite(tpns) || !(tpns > 0.0)) {
     flog::error("ticks_per_ns calibration returned non-finite or non-positive value: {}", tpns);
     return 2;
   }
 
-  // No partial output: buffer all rows, emit only after every row succeeded.
-  auto measured = measure_all(*bench, rows, opts.reps, opts.warmup);
+  auto measured = measure_all(*inputs->bench, inputs->rows, opts.reps, opts.warmup);
   if (!measured) {
     return 2;
   }
 
-  emit_csv(*out, opts.name, column_names(axes, options), opts.freq_hz, tpns, *measured);
+  emit_csv(*out, opts.name, inputs->cols, opts.freq_hz, tpns, *measured);
   return 0;
 }
 
