@@ -1,7 +1,5 @@
 #include "ferret/timing.hpp"
 
-#if defined(__aarch64__) || defined(_M_ARM64)
-
 namespace ferret::timing {
 
 uint64_t arch_now_ticks() {
@@ -11,5 +9,3 @@ uint64_t arch_now_ticks() {
 }
 
 }  // namespace ferret::timing
-
-#endif

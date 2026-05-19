@@ -1,7 +1,5 @@
 #include "ferret/pinning.hpp"
 
-#ifdef __APPLE__
-
 #include <mach/mach.h>
 #include <mach/thread_act.h>
 #include <mach/thread_policy.h>
@@ -22,9 +20,12 @@ bool pin_to_core(int cpu) {
   // KERN_NOT_SUPPORTED regardless of the tag. On that path we fall back
   // to a QoS hint that strongly prefers the P-cluster — the closest
   // approximation to "run on a fast core" the kernel exposes.
-  // The cpu>1024 guard keeps PinToImpossiblyHighCoreReturnsFalse
-  // honest (no fallback for nonsense inputs).
-  if (cpu < 0 || cpu > 1024) {
+  // Reject obviously-nonsense core IDs before falling back to the QoS hint.
+  // 1024 is an arbitrary upper bound far above any shipping CPU's core
+  // count; its only purpose is to keep PinToImpossiblyHighCoreReturnsFalse
+  // honest. Real Apple Silicon ships up to ~24 cores (M-Ultra).
+  static constexpr int kMaxAcceptedCpuId = 1024;
+  if (cpu < 0 || cpu > kMaxAcceptedCpuId) {
     return false;
   }
   thread_affinity_policy_data_t policy = {cpu + 1};
@@ -48,5 +49,3 @@ bool boost_priority() { return setpriority(PRIO_PROCESS, 0, -10) == 0; }
 bool lock_memory() { return mlockall(MCL_CURRENT | MCL_FUTURE) == 0; }
 
 }  // namespace ferret::pinning
-
-#endif
