@@ -13,9 +13,14 @@ mapfile -t CXX_FORMAT_FILES < <(
     -type f
 )
 
-# C++ files to lint with clang-tidy (excludes tests — gtest macros).
+# Lint exactly the .cpp files CMake compiled this build (per-platform
+# source selection in CMakeLists.txt excludes wrong-arch / wrong-OS files
+# from build/compile_commands.json; lint should follow the same set).
 mapfile -t CXX_LINT_FILES < <(
-  find src benchmarks -name '*.cpp' -type f
+  jq -r '.[].file' build/compile_commands.json \
+    | grep -v '/_deps/' \
+    | grep -v '/tests/' \
+    | sort -u
 )
 
 echo "==> clang-format --dry-run"

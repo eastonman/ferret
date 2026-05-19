@@ -11,16 +11,10 @@ TEST(Parse, ParsesPositiveInteger) {
   EXPECT_EQ(ferret::parse_int("9223372036854775807"), 9223372036854775807LL);
 }
 
-TEST(Parse, RejectsEmpty) {
-  EXPECT_THROW(ferret::parse_int(""), std::invalid_argument);
-}
+TEST(Parse, RejectsEmpty) { EXPECT_THROW(ferret::parse_int(""), std::invalid_argument); }
 
-TEST(Parse, RejectsTrailingJunk) {
-  EXPECT_THROW(ferret::parse_int("42abc"), std::invalid_argument);
-}
+TEST(Parse, RejectsTrailingJunk) { EXPECT_THROW(ferret::parse_int("42abc"), std::invalid_argument); }
 
-TEST(Parse, RejectsNonNumeric) {
-  EXPECT_THROW(ferret::parse_int("abc"), std::invalid_argument);
-}
+TEST(Parse, RejectsNonNumeric) { EXPECT_THROW(ferret::parse_int("abc"), std::invalid_argument); }
 
 }  // namespace

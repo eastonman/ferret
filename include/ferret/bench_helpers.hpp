@@ -83,7 +83,9 @@ inline void verify_uniform_spacing(const std::vector<sljit_label*>& labels, size
       msg.append("site ").append(std::to_string(i)).append(" at offset ").append(std::to_string(actual));
       if (strict) {
         msg.append(", expected ").append(std::to_string(expected));
-        msg.append(" (delta ").append(std::to_string(static_cast<int64_t>(actual) - static_cast<int64_t>(expected))).append(")");
+        msg.append(" (delta ")
+            .append(std::to_string(static_cast<int64_t>(actual) - static_cast<int64_t>(expected)))
+            .append(")");
       } else {
         msg.append(", expected at least ").append(std::to_string(expected));
       }

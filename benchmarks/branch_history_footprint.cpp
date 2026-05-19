@@ -10,8 +10,8 @@ extern "C" {
 #include <string>
 #include <vector>
 
-#include "ferret/benchmark.hpp"
 #include "ferret/bench_helpers.hpp"
+#include "ferret/benchmark.hpp"
 #include "ferret/padding.hpp"
 #include "ferret/permute.hpp"
 

@@ -94,6 +94,4 @@ TEST(Permute, MixSeedDiffersForDifferentTuples) {
   EXPECT_NE(b, c);
 }
 
-TEST(Permute, MixSeedDeterministic) {
-  EXPECT_EQ(ferret::mix_seed(42, 100, 200), ferret::mix_seed(42, 100, 200));
-}
+TEST(Permute, MixSeedDeterministic) { EXPECT_EQ(ferret::mix_seed(42, 100, 200), ferret::mix_seed(42, 100, 200)); }
