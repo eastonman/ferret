@@ -18,9 +18,8 @@ TEST(BenchHelpers, EmitOuterLoopRunsIterTimes) {
   sljit_emit_enter(c, 0, SLJIT_ARGS0(W), /*scratches=*/2, /*saved=*/0, /*local_size=*/0);
   sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, 0);
 
-  ferret::emit_outer_loop(c, SLJIT_R1, /*iters=*/7, [&] {
-    sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
-  });
+  ferret::emit_outer_loop(c, SLJIT_R1, /*iters=*/7,
+                          [&] { sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1); });
 
   sljit_emit_return(c, SLJIT_MOV, SLJIT_R0, 0);
 
@@ -60,10 +59,11 @@ TEST(BenchHelpers, EmitOuterLoopZeroItersAsserts) {
   sljit_compiler* c = sljit_create_compiler(nullptr);
   ASSERT_NE(c, nullptr);
   sljit_emit_enter(c, 0, SLJIT_ARGS0(W), 2, 0, 0);
-  // Death tests use the EXPECT_DEATH macro from gtest. Pattern matches
-  // glibc's standard assert() output.
-  EXPECT_DEATH(ferret::emit_outer_loop(c, SLJIT_R1, /*iters=*/0, [] {}),
-               "iters > 0");
+  // EXPECT_DEBUG_DEATH (not EXPECT_DEATH): the assert is compiled out in
+  // Release builds (NDEBUG defined). DEBUG_DEATH executes the expression
+  // once in Release without expecting a crash, and asserts a death match
+  // only in Debug builds — the correct test for an assert-based guard.
+  EXPECT_DEBUG_DEATH(ferret::emit_outer_loop(c, SLJIT_R1, /*iters=*/0, [] {}), "iters > 0");
   sljit_free_compiler(c);
 }
 

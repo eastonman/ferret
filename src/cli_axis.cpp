@@ -18,6 +18,7 @@ struct HiAndK {
   std::string hi_s;
   std::optional<int64_t> k;
 };
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 HiAndK parse_at_suffix(const std::string& hi_and_suffix, const std::string& cli_value) {
   auto at = hi_and_suffix.find('@');
   if (at == std::string::npos) {
