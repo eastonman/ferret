@@ -3,6 +3,7 @@ extern "C" {
 }
 
 #include "ferret/benchmark.hpp"
+#include "ferret/bench_helpers.hpp"
 
 namespace ferret {
 
@@ -35,17 +36,11 @@ struct DependentChainThroughput : Benchmark {
     sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, 1);
 
     if (full_blocks > 0) {
-      sljit_emit_op1(c, SLJIT_MOV, SLJIT_R1, 0, SLJIT_IMM, static_cast<sljit_sw>(full_blocks));
-
-      sljit_label* loop_top = sljit_emit_label(c);
-
-      for (int i = 0; i < UNROLL; ++i) {
-        sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
-      }
-
-      sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, 1);
-      sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-      sljit_set_label(back, loop_top);
+      emit_outer_loop(c, SLJIT_R1, full_blocks, [&] {
+        for (int i = 0; i < UNROLL; ++i) {
+          sljit_emit_op2(c, SLJIT_ADD, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
+        }
+      });
     }
 
     // Straight-line tail: exactly `remainder` ADDs so total ops match

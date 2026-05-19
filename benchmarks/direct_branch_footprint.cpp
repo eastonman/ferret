@@ -13,6 +13,7 @@ extern "C" {
 
 #include "ferret/benchmark.hpp"
 #include "ferret/padding.hpp"
+#include "ferret/bench_helpers.hpp"
 #include "ferret/permute.hpp"
 
 namespace ferret {
@@ -85,7 +86,7 @@ struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return std::max<size_t>(1, 10'000'000 / p.get<size_t>("branches"));
+    return compute_iterations(10'000'000, p.get<size_t>("branches"));
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
@@ -108,9 +109,6 @@ struct DirectBranchFootprint : Benchmark {
     }
 
     sljit_emit_enter(c, 0, SLJIT_ARGS0V(), 1, 1, 0);
-    sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
-
-    sljit_label* loop_top = sljit_emit_label(c);
 
     std::vector<sljit_label*> labels(branches + 1);
     std::vector<sljit_jump*> jumps(branches);
@@ -127,18 +125,20 @@ struct DirectBranchFootprint : Benchmark {
     // raw op_custom bytes, so each site is deterministically 5 bytes.
     // verify_layout() patches the displacements once sljit has resolved
     // label addresses.
-    for (size_t i = 0; i < branches; ++i) {
-      labels[i] = sljit_emit_label(c);
+    emit_outer_loop(c, SLJIT_R0, iters, [&] {
+      for (size_t i = 0; i < branches; ++i) {
+        labels[i] = sljit_emit_label(c);
 #if defined(__aarch64__) || defined(_M_ARM64)
-      jumps[i] = sljit_emit_jump(c, SLJIT_JUMP);
+        jumps[i] = sljit_emit_jump(c, SLJIT_JUMP);
 #elif defined(__x86_64__) || defined(_M_X64)
-      static constexpr std::array<uint8_t, kJumpBytes> jmp_rel32_placeholder = {0xE9, 0, 0, 0, 0};
-      sljit_emit_op_custom(c, const_cast<uint8_t*>(jmp_rel32_placeholder.data()), kJumpBytes);
-      jumps[i] = nullptr;
+        static constexpr std::array<uint8_t, kJumpBytes> jmp_rel32_placeholder = {0xE9, 0, 0, 0, 0};
+        sljit_emit_op_custom(c, const_cast<uint8_t*>(jmp_rel32_placeholder.data()), kJumpBytes);
+        jumps[i] = nullptr;
 #endif
-      emit_nops(c, spacing - kJumpBytes);
-    }
-    labels[branches] = sljit_emit_label(c);
+        emit_nops(c, spacing - kJumpBytes);
+      }
+      labels[branches] = sljit_emit_label(c);
+    });
 
     // next[i] = label index branch i targets; labels[branches] is the
     // post-chain exit so the outer-loop decrement runs once per iteration.
@@ -146,8 +146,7 @@ struct DirectBranchFootprint : Benchmark {
     if (sattolo == 0) {
       std::iota(next.begin(), next.end(), size_t{1});
     } else {
-      uint64_t mixed = seed ^ (static_cast<uint64_t>(branches) * 0x9E3779B97F4A7C15ULL) ^
-                       (static_cast<uint64_t>(spacing) * 0xBF58476D1CE4E5B9ULL);
+      uint64_t mixed = mix_seed(seed, branches, spacing);
       next = sattolo_cycle(branches, mixed);
       // Break the unique edge k→0 so the chain exits to labels[branches]
       // after exactly N branches instead of looping forever.
@@ -165,10 +164,6 @@ struct DirectBranchFootprint : Benchmark {
     }
 #endif
 
-    sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
-    sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-    sljit_set_label(back, loop_top);
-
     sljit_emit_return_void(c);
 
     last_labels_ = std::move(labels);
@@ -185,19 +180,7 @@ struct DirectBranchFootprint : Benchmark {
     if (last_branches_ == 0 || last_labels_.empty()) {
       return;
     }
-    sljit_uw base = sljit_get_label_addr(last_labels_[0]);
-    for (size_t i = 1; i <= last_branches_; ++i) {
-      sljit_uw addr = sljit_get_label_addr(last_labels_[i]);
-      auto actual = static_cast<size_t>(addr - base);
-      size_t expected = i * last_spacing_;
-      if (actual != expected) {
-        auto delta = static_cast<int64_t>(actual) - static_cast<int64_t>(expected);
-        throw std::runtime_error("direct_branch_footprint: site " + std::to_string(i) + " at offset " +
-                                 std::to_string(actual) + ", expected " + std::to_string(expected) + " (delta " +
-                                 std::to_string(delta) +
-                                 ") — actual jump encoding differs from kJumpBytes=" + std::to_string(kJumpBytes));
-      }
-    }
+    verify_uniform_spacing(last_labels_, last_spacing_, /*strict=*/true, "direct_branch_footprint");
 
 #if defined(__x86_64__) || defined(_M_X64)
     // Write the 4-byte rel32 displacement after each 0xE9 opcode. On

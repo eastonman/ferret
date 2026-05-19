@@ -91,6 +91,15 @@ target_link_libraries(test_permute PRIVATE
 )
 gtest_discover_tests(test_permute)
 
+add_executable(test_bench_helpers test_bench_helpers.cpp)
+target_link_libraries(test_bench_helpers PRIVATE
+  ferret_core
+  sljit::sljit
+  GTest::gtest GTest::gtest_main
+  ferret_warnings
+)
+gtest_discover_tests(test_bench_helpers)
+
 add_executable(test_nested_call_depth
   test_nested_call_depth.cpp
   ../benchmarks/nested_call_depth.cpp

@@ -11,7 +11,9 @@ extern "C" {
 #include <vector>
 
 #include "ferret/benchmark.hpp"
+#include "ferret/bench_helpers.hpp"
 #include "ferret/padding.hpp"
+#include "ferret/permute.hpp"
 
 namespace ferret {
 
@@ -51,10 +53,8 @@ std::vector<uint32_t> generate_pattern_fill(size_t branches, size_t history_len,
     return flat;
   }
   // Mix seed with (branches, history_len) so distinct grid points get
-  // distinct fills. Same constants as direct_branch_footprint uses for
-  // its Sattolo seed mix — keeps the seed convention consistent.
-  uint64_t mixed = seed ^ (static_cast<uint64_t>(branches) * 0x9E3779B97F4A7C15ULL) ^
-                   (static_cast<uint64_t>(history_len) * 0xBF58476D1CE4E5B9ULL);
+  // distinct fills.
+  uint64_t mixed = mix_seed(seed, branches, history_len);
   std::mt19937_64 rng(mixed);
   for (auto& v : flat) {
     v = static_cast<uint32_t>(rng() & 1U);
@@ -105,7 +105,7 @@ struct BranchHistoryFootprint : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return std::max<size_t>(1, 10'000'000 / p.get<size_t>("branches"));
+    return compute_iterations(10'000'000, p.get<size_t>("branches"));
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override;
@@ -147,52 +147,33 @@ void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {
   sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/3, /*saved=*/2, /*local_size=*/0);
   sljit_emit_op1(c, SLJIT_MOV, SLJIT_S0, 0, SLJIT_IMM, reinterpret_cast<sljit_sw>(flat_.data()));
   sljit_emit_op1(c, SLJIT_MOV, SLJIT_S1, 0, SLJIT_IMM, 0);
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
 
-  // Outer-loop top: recompute row_ptr per iteration.
-  sljit_label* loop_top = sljit_emit_label(c);
+  emit_outer_loop(c, SLJIT_R0, iters, [&] {
+    // row_ptr = flat_base + hist_idx * (branches * 4)
+    sljit_emit_op2(c, SLJIT_MUL, SLJIT_R1, 0, SLJIT_S1, 0, SLJIT_IMM, static_cast<sljit_sw>(branches * 4));
+    sljit_emit_op2(c, SLJIT_ADD, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_S0, 0);
 
-  // row_ptr = flat_base + hist_idx * (branches * 4)
-  sljit_emit_op2(c, SLJIT_MUL, SLJIT_R1, 0, SLJIT_S1, 0, SLJIT_IMM, static_cast<sljit_sw>(branches * 4));
-  sljit_emit_op2(c, SLJIT_ADD, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_S0, 0);
+    last_labels_.clear();
+    last_labels_.reserve(branches + 1);
 
-  // Branch chain: `branches` sites, each at least `spacing` bytes wide.
-  last_labels_.clear();
-  last_labels_.reserve(branches + 1);
-
-  for (size_t j = 0; j < branches; ++j) {
+    for (size_t j = 0; j < branches; ++j) {
+      last_labels_.push_back(sljit_emit_label(c));
+      sljit_emit_op1(c, SLJIT_MOV_U32, SLJIT_R2, 0, SLJIT_MEM1(SLJIT_R1), static_cast<sljit_sw>(j * 4));
+      sljit_jump* jmp = sljit_emit_cmp(c, SLJIT_NOT_EQUAL | SLJIT_32, SLJIT_R2, 0, SLJIT_IMM, 0);
+      sljit_label* after = sljit_emit_label(c);
+      sljit_set_label(jmp, after);
+      emit_nops(c, spacing - kMinSiteBytes);
+    }
     last_labels_.push_back(sljit_emit_label(c));
 
-    // Load u32 pattern value.
-    sljit_emit_op1(c, SLJIT_MOV_U32, SLJIT_R2, 0, SLJIT_MEM1(SLJIT_R1), static_cast<sljit_sw>(j * 4));
-    // Branch on (loaded value != 0) to the immediately-following label.
-    // Architecturally a no-op; only the direction predictor is exercised.
-    sljit_jump* jmp = sljit_emit_cmp(c, SLJIT_NOT_EQUAL | SLJIT_32, SLJIT_R2, 0, SLJIT_IMM, 0);
-    sljit_label* after = sljit_emit_label(c);
-    sljit_set_label(jmp, after);
-
-    // Pad to a minimum site width of `spacing` bytes. `spacing -
-    // kMinSiteBytes` is conservative — if sljit picks a longer
-    // encoding the site overshoots `spacing` but the chain stride
-    // remains >= spacing, which is what the BTB-conflict-avoidance
-    // contract requires.
-    emit_nops(c, spacing - kMinSiteBytes);
-  }
-  // Chain-exit label (one past the last site).
-  last_labels_.push_back(sljit_emit_label(c));
-
-  // hist_idx wrap: hist_idx = (hist_idx+1 == history_len) ? 0 : hist_idx+1.
-  sljit_emit_op2(c, SLJIT_ADD, SLJIT_S1, 0, SLJIT_S1, 0, SLJIT_IMM, 1);
-  sljit_emit_op2u(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_S1, 0, SLJIT_IMM, static_cast<sljit_sw>(history_len));
-  sljit_jump* skip_reset = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_S1, 0, SLJIT_IMM, 0);
-  sljit_label* after_wrap = sljit_emit_label(c);
-  sljit_set_label(skip_reset, after_wrap);
-
-  // Outer-loop tail: dec iters, back-edge.
-  sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
-  sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-  sljit_set_label(back, loop_top);
+    // hist_idx wrap: hist_idx = (hist_idx+1 == history_len) ? 0 : hist_idx+1.
+    sljit_emit_op2(c, SLJIT_ADD, SLJIT_S1, 0, SLJIT_S1, 0, SLJIT_IMM, 1);
+    sljit_emit_op2u(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_S1, 0, SLJIT_IMM, static_cast<sljit_sw>(history_len));
+    sljit_jump* skip_reset = sljit_emit_jump(c, SLJIT_NOT_ZERO);
+    sljit_emit_op1(c, SLJIT_MOV, SLJIT_S1, 0, SLJIT_IMM, 0);
+    sljit_label* after_wrap = sljit_emit_label(c);
+    sljit_set_label(skip_reset, after_wrap);
+  });
 
   sljit_emit_return_void(c);
 
@@ -205,16 +186,7 @@ void BranchHistoryFootprint::verify_layout(sljit_compiler* /*c*/) {
   if (last_branches_ == 0 || last_labels_.empty()) {
     return;
   }
-  sljit_uw base = sljit_get_label_addr(last_labels_[0]);
-  for (size_t i = 1; i <= last_branches_; ++i) {
-    sljit_uw addr = sljit_get_label_addr(last_labels_[i]);
-    auto actual = static_cast<size_t>(addr - base);
-    size_t expected_min = i * last_spacing_;
-    if (actual < expected_min) {
-      throw std::runtime_error("branch_history_footprint: site " + std::to_string(i) + " at offset " +
-                               std::to_string(actual) + ", expected at least " + std::to_string(expected_min));
-    }
-  }
+  verify_uniform_spacing(last_labels_, last_spacing_, /*strict=*/false, "branch_history_footprint");
 }
 
 namespace branch_history_footprint_internal {

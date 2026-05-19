@@ -9,6 +9,7 @@ extern "C" {
 #include <vector>
 
 #include "ferret/benchmark.hpp"
+#include "ferret/bench_helpers.hpp"
 
 namespace ferret {
 
@@ -54,15 +55,11 @@ void emit_variant0_single_site(sljit_compiler* c, size_t depth, size_t iters) {
 
   // chain_main: outer loop with one call into BODY_depth.
   sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/0, /*local_size=*/0);
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
-
-  sljit_label* loop_top = sljit_emit_label(c);
-  sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
-  pending_calls.push_back(call_main);
-  pending_targets.push_back(depth);
-  sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_R0, 0, SLJIT_R0, 0, SLJIT_IMM, 1);
-  sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-  sljit_set_label(back, loop_top);
+  emit_outer_loop(c, SLJIT_R0, iters, [&] {
+    sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
+    pending_calls.push_back(call_main);
+    pending_targets.push_back(depth);
+  });
   sljit_emit_return_void(c);
 
   // BODY_d (d in [1, depth]) — single call to BODY_{d-1}.
@@ -109,15 +106,11 @@ void emit_variant1_counter_bit(sljit_compiler* c, size_t depth, size_t iters) {
 
   // chain_main: counter in S0, single call into BODY_depth per iter.
   sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/1, /*local_size=*/0);
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_S0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
-
-  sljit_label* loop_top = sljit_emit_label(c);
-  sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
-  pending_calls.push_back(call_main);
-  pending_targets.push_back(depth);
-  sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_S0, 0, SLJIT_S0, 0, SLJIT_IMM, 1);
-  sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-  sljit_set_label(back, loop_top);
+  emit_outer_loop(c, SLJIT_S0, iters, [&] {
+    sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
+    pending_calls.push_back(call_main);
+    pending_targets.push_back(depth);
+  });
   sljit_emit_return_void(c);
 
   // BODY_d — test S0 & 1, branch to one of two call sites.
@@ -264,22 +257,16 @@ void emit_variant2_path_table(sljit_compiler* c, size_t depth, size_t iters, siz
 
   // chain_main: S0 = counter, S1 = row pointer (recomputed per iter).
   sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/2, /*saved=*/2, /*local_size=*/0);
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_S0, 0, SLJIT_IMM, static_cast<sljit_sw>(iters));
+  emit_outer_loop(c, SLJIT_S0, iters, [&] {
+    // R0 = table_ptr; R1 = (S0 & (rows-1)) * stride; S1 = R0 + R1.
+    sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, reinterpret_cast<sljit_sw>(table_ptr));
+    sljit_emit_op2(c, SLJIT_AND, SLJIT_R1, 0, SLJIT_S0, 0, SLJIT_IMM, static_cast<sljit_sw>(rows - 1));
+    sljit_emit_op2(c, SLJIT_MUL, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, static_cast<sljit_sw>(stride));
+    sljit_emit_op2(c, SLJIT_ADD, SLJIT_S1, 0, SLJIT_R0, 0, SLJIT_R1, 0);
 
-  sljit_label* loop_top = sljit_emit_label(c);
-
-  // R0 = table_ptr; R1 = (S0 & (rows-1)) * stride; S1 = R0 + R1.
-  sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, reinterpret_cast<sljit_sw>(table_ptr));
-  sljit_emit_op2(c, SLJIT_AND, SLJIT_R1, 0, SLJIT_S0, 0, SLJIT_IMM, static_cast<sljit_sw>(rows - 1));
-  sljit_emit_op2(c, SLJIT_MUL, SLJIT_R1, 0, SLJIT_R1, 0, SLJIT_IMM, static_cast<sljit_sw>(stride));
-  sljit_emit_op2(c, SLJIT_ADD, SLJIT_S1, 0, SLJIT_R0, 0, SLJIT_R1, 0);
-
-  // chain_main itself runs the K=8 dispatch at table offset 0.
-  emit_k8_dispatch(c, /*table_offset=*/0, /*target_d=*/depth, pending_calls, pending_targets);
-
-  sljit_emit_op2(c, SLJIT_SUB | SLJIT_SET_Z, SLJIT_S0, 0, SLJIT_S0, 0, SLJIT_IMM, 1);
-  sljit_jump* back = sljit_emit_jump(c, SLJIT_NOT_ZERO);
-  sljit_set_label(back, loop_top);
+    // chain_main itself runs the K=8 dispatch at table offset 0.
+    emit_k8_dispatch(c, /*table_offset=*/0, /*target_d=*/depth, pending_calls, pending_targets);
+  });
   sljit_emit_return_void(c);
 
   for (size_t d = depth; d >= 1; --d) {
@@ -337,7 +324,7 @@ struct NestedCallDepth : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("depth") + 1; }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return std::max<size_t>(1, 1'000'000 / (p.get<size_t>("depth") + 1));
+    return compute_iterations(1'000'000, p.get<size_t>("depth") + 1);
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
