@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import tempfile
 import webbrowser
 from pathlib import Path
@@ -55,6 +56,9 @@ _INSTALL_HINT = (
     "the binary, or run `python -m plotly.io._kaleido install_chrome` "
     "to install a portable headless chrome."
 )
+_WEBGL_EXPORT_HINT = (
+    "surface PNG export needs Chrome or Chromium on PATH so ferret can render Plotly WebGL with SwiftShader"
+)
 
 # Module-level cache so we probe at most once per process.
 _chrome_probe_cache: dict[str, bool] = {}
@@ -89,6 +93,20 @@ def _chrome_available() -> bool:
     if any(shutil.which(name) is not None for name in _CHROME_NAMES):
         return True
     return any(os.path.isfile(p) and os.access(p, os.X_OK) for p in _MACOS_CHROME_PATHS)
+
+
+def _find_chrome_executable() -> str | None:
+    browser_path = os.environ.get("BROWSER_PATH")
+    if browser_path and os.path.isfile(browser_path) and os.access(browser_path, os.X_OK):
+        return browser_path
+    for name in _CHROME_NAMES:
+        path = shutil.which(name)
+        if path is not None:
+            return path
+    for path in _MACOS_CHROME_PATHS:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
 
 
 def _resolve_format(out: str | None, fmt: str | None) -> str:
@@ -151,6 +169,45 @@ def _surface_canvas(fig: Any) -> tuple[int, int]:
     return width, height
 
 
+def _has_surface_trace(fig: Any) -> bool:
+    return any(getattr(trace, "type", "") == "surface" for trace in fig.data)
+
+
+def _is_kaleido_canvas_error(exc: Exception) -> bool:
+    msg = str(exc)
+    return "error code 525" in msg and "canvas/context" in msg
+
+
+def _write_chromium_webgl_png(fig: Any, out: str, *, width: int, height: int) -> None:
+    """Render Plotly WebGL via external headless Chromium and screenshot it."""
+    chrome = _find_chrome_executable()
+    if chrome is None:
+        raise PlotError(_WEBGL_EXPORT_HINT)
+
+    with tempfile.TemporaryDirectory(prefix="ferret-plot-webgl-") as tmpdir:
+        html_path = Path(tmpdir) / "surface.html"
+        # Inline Plotly JS avoids network/CDN stalls in headless Chrome.
+        fig.write_html(str(html_path), include_plotlyjs=True, full_html=True)
+        cmd = [
+            chrome,
+            "--headless",
+            "--no-sandbox",
+            "--enable-webgl",
+            "--ignore-gpu-blocklist",
+            "--enable-unsafe-swiftshader",
+            "--use-angle=swiftshader",
+            "--virtual-time-budget=5000",
+            f"--screenshot={out}",
+            f"--window-size={width},{height}",
+            f"file://{html_path}",
+        ]
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            detail = getattr(e, "stderr", "") or str(e)
+            raise PlotError(f"surface PNG WebGL export failed: {detail}") from e
+
+
 def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
     """Write `fig` to `out` (or open in browser if `out is None`).
 
@@ -181,4 +238,10 @@ def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
     # Image format => kaleido path. Probe Chrome first.
     _check_chrome()
     width, height = _image_size(fig)
-    fig.write_image(out, format=resolved, width=width, height=height, scale=2)
+    try:
+        fig.write_image(out, format=resolved, width=width, height=height, scale=2)
+    except ValueError as e:
+        if resolved == "png" and _has_surface_trace(fig) and _is_kaleido_canvas_error(e):
+            _write_chromium_webgl_png(fig, out, width=width, height=height)
+            return
+        raise

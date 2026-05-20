@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import types
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import plotly.graph_objects as go
@@ -89,6 +90,30 @@ class TestChromeProbe:
         monkeypatch.setattr(output, "_chrome_available", lambda: False)
         with pytest.raises(PlotError, match="Chrome or Chromium"):
             output.emit(fig, out=str(tmp_path / "x.png"), fmt=None, html_js="cdn")
+
+
+class TestSurfaceWebglFallback:
+    def test_surface_png_uses_chromium_webgl_when_kaleido_canvas_fails(self, tmp_path, monkeypatch):
+        fig = go.Figure(data=[go.Surface(z=[[1.0, 2.0], [3.0, 4.0]])])
+
+        def fail_write_image(*_args, **_kwargs):
+            raise ValueError("Transform failed with error code 525: error creating static canvas/context")
+
+        calls = []
+
+        def fake_webgl(fig_arg, out_arg, *, width, height):
+            calls.append((fig_arg, out_arg, width, height))
+            Path(out_arg).write_bytes(b"\x89PNG\r\n\x1a\n")
+
+        monkeypatch.setattr(output, "_chrome_available", lambda: True)
+        monkeypatch.setattr(fig, "write_image", fail_write_image)
+        monkeypatch.setattr(output, "_write_chromium_webgl_png", fake_webgl)
+
+        out = tmp_path / "surface.png"
+        output.emit(fig, out=str(out), fmt=None, html_js="cdn")
+
+        assert calls == [(fig, str(out), 2400, 1000)]
+        assert out.read_bytes() == b"\x89PNG\r\n\x1a\n"
 
 
 class TestChromeAvailable:
