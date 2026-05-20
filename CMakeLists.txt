@@ -192,10 +192,11 @@ target_compile_features(ferret_core PUBLIC cxx_std_20)
 
 add_executable(ferret
   src/main.cpp
+  benchmarks/bias_conditional_branch_count.cpp
+  benchmarks/branch_history_footprint.cpp
   benchmarks/dependent_chain_throughput.cpp
   benchmarks/direct_branch_footprint.cpp
   benchmarks/nested_call_depth.cpp
-  benchmarks/branch_history_footprint.cpp
 )
 target_link_libraries(ferret PRIVATE
   ferret_core

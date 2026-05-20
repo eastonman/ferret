@@ -122,6 +122,17 @@ target_link_libraries(test_branch_history_footprint PRIVATE
 )
 gtest_discover_tests(test_branch_history_footprint)
 
+add_executable(test_bias_conditional_branch_count
+  test_bias_conditional_branch_count.cpp
+  ../benchmarks/bias_conditional_branch_count.cpp
+)
+target_link_libraries(test_bias_conditional_branch_count PRIVATE
+  ferret_core
+  sljit::sljit
+  GTest::gtest GTest::gtest_main
+)
+gtest_discover_tests(test_bias_conditional_branch_count)
+
 add_executable(test_jit test_jit.cpp)
 target_link_libraries(test_jit PRIVATE
   ferret_core
