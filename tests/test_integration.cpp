@@ -651,3 +651,53 @@ TEST(Integration, NestedCallDepthLongSweepRowCount) {
   EXPECT_EQ(newlines, 65u) << "expected 1 header + 64 data rows";
   EXPECT_EQ(contents.find(",,"), std::string::npos);
 }
+
+TEST(Integration, BiasConditionalBranchCountProducesExpectedRowCount) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bcbc.csv";
+  std::filesystem::remove(out);
+  // branches ∈ {1, 2, 4} × total_outcomes ∈ {8, 16} → 6 data rows.
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run bias_conditional_branch_count"
+                    " --branches=1..4 --total_outcomes=8..16"
+                    " --bias_pct=95 --nt_branch_pct=50"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 7u);  // header + 6 data rows
+  EXPECT_EQ(contents.find(",,\n"), std::string::npos);
+}
+
+TEST(Integration, BiasConditionalBranchCountHeaderHasExpectedColumns) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bcbc_hdr.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run bias_conditional_branch_count"
+                    " --branches=1 --total_outcomes=8"
+                    " --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  EXPECT_NE(contents.find("branches"), std::string::npos);
+  EXPECT_NE(contents.find("total_outcomes"), std::string::npos);
+  EXPECT_NE(contents.find("bias_pct"), std::string::npos);
+  EXPECT_NE(contents.find("nt_branch_pct"), std::string::npos);
+  EXPECT_NE(contents.find("spacing_bytes"), std::string::npos);
+}
+
+TEST(Integration, BiasConditionalBranchCountRejectsTotalOutcomesBelowBranches) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_bcbc_bad.csv";
+  std::filesystem::remove(out);
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run bias_conditional_branch_count"
+                    " --branches=64 --total_outcomes=8"
+                    " --reps=1 --warmup=0"
+                    " --out=" +
+                    out.string();
+  EXPECT_NE(0, run(cmd));
+}
