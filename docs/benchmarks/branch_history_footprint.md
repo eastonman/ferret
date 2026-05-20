@@ -55,11 +55,10 @@ Annotated:
 
 ## Per-benchmark options
 
-| flag                  | meaning                                                  |
-| --------------------- | -------------------------------------------------------- |
-| `--pattern=0`         | All-zero fill — all-not-taken trivial baseline.          |
-| `--pattern=1` (def.)  | Per-entry random `{0,1}` seeded by `--seed`.             |
-| `--spacing_bytes=16`  | Minimum PC stride per site. Min 8 (AArch64) / 6 (x86_64). |
+| flag                          | meaning                                                  |
+| ----------------------------- | -------------------------------------------------------- |
+| `--taken_prob_pct=N` (def. 50) | Per-cell probability of *taken* in percent, `N` in `[0, 100]`. `0` = all-not-taken; `100` = all-taken; `50` = max-entropy iid 50/50 (the old `--pattern=1`). Independent Bernoulli per cell, seeded by `--seed`. |
+| `--spacing_bytes=16`          | Minimum PC stride per site. Min 8 (AArch64) / 6 (x86_64). |
 
 ## CLI surface
 
@@ -69,7 +68,7 @@ Annotated:
 | `--branches=A..B@k`        | Geometric sweep with `k` samples per octave.                           |
 | `--branches=v1,v2,…`       | Explicit list.                                                         |
 | `--history_len=A..B[@k]`   | Same syntax as `--branches`. Default `4..4096`.                        |
-| `--pattern=0\|1`           | See above. Default `1`.                                                |
+| `--taken_prob_pct=N`       | See above. Integer percent in `[0, 100]`. Default `50`.                |
 | `--spacing_bytes=N`        | Minimum per-site PC stride. Default 16.                                |
 | `--seed=…`                 | Seeds the per-branch random fill.                                      |
 
@@ -91,10 +90,15 @@ everything.
 High region: cost steps up; the cliff position is the predictor's
 capacity for this workload shape.
 
-Running with `--pattern=0` gives a flat control surface across both
-axes (always-not-taken is trivial to predict regardless of count).
-Compare against the `--pattern=1` heatmap to confirm the cliff is
+Running with `--taken_prob_pct=0` (always-not-taken) or `=100`
+(always-taken) gives a flat control surface across both axes — both
+endpoints are trivial to predict regardless of count. Compare either
+against the default `=50` heatmap to confirm the cliff is
 predictor-driven, not kernel-driven.
+
+A `--taken_prob_pct` sweep at fixed `(branches, history_len)` in the
+post-cliff region traces a U-shape: cost is low near `0` and `100`
+(low per-branch entropy) and peaks near `50` (max entropy).
 
 ## Caveats
 
