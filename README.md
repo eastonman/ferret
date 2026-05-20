@@ -80,6 +80,7 @@ CLI flags and axis syntax: [`docs/cli.md`](docs/cli.md).
 | [`direct_branch_footprint`](docs/benchmarks/direct_branch_footprint.md)          | direct-jump BTB capacity                 |
 | [`nested_call_depth`](docs/benchmarks/nested_call_depth.md)                      | Return Address Stack (RAS) depth         |
 | [`branch_history_footprint`](docs/benchmarks/branch_history_footprint.md)        | conditional-branch direction-predictor capacity |
+| [`bias_conditional_branch_count`](docs/benchmarks/bias_conditional_branch_count.md) | SC bias-table capacity (TAGE-SC-L)    |
 
 Each benchmark page has the kernel structure, CLI surface, and reading-the-curves guide.
 
