@@ -28,18 +28,18 @@ namespace {
 //                  pattern. Must be the deterministic final size.
 //
 // AArch64: a single B imm26 (4 bytes) reaches ±128 MB, larger than any
-//   realistic ferret kernel. sljit_emit_jump reserves 5 instructions
-//   (JUMP_MAX_SIZE; sljitNativeARM_64.c:2528) and reduce_code_size
-//   collapses each non-rewritable jump to 1 insn for in-range targets
-//   (sljitNativeARM_64.c:443-463). Net: 4 bytes per branch, predictable.
+//   realistic ferret kernel. sljit reserves the worst-case jump width
+//   at emit time and its reduce_code_size pass then collapses every
+//   non-rewritable jump to one instruction for in-range targets. Net:
+//   4 bytes per branch, predictable.
 //
-// x86_64: sljit_emit_jump can't be made to commit to one encoding
-//   without forfeiting 13 B per site (SLJIT_REWRITABLE_JUMP) — reduce
-//   picks rel8 (2 B) or rel32 (5 B) per-jump based on the hop distance
-//   (sljitNativeX86_common.c:863-867), which is unbounded for
-//   sattolo_permute. Instead we hand-emit `JMP rel32` (E9 + 4-byte
-//   displacement) via sljit_emit_op_custom and patch the displacement
-//   post-generate from sljit_get_label_addr. 5 bytes uniform, any hop.
+// x86_64: sljit_emit_jump can't be pinned to a single encoding without
+//   forfeiting 13 B per site (SLJIT_REWRITABLE_JUMP) — the reduce pass
+//   picks rel8 (2 B) or rel32 (5 B) per jump based on the hop distance,
+//   which is unbounded under sattolo_permute. Instead we hand-emit
+//   `JMP rel32` (E9 + 4-byte displacement) via sljit_emit_op_custom and
+//   patch the displacement post-generate from sljit_get_label_addr.
+//   5 bytes uniform, any hop.
 #if defined(__aarch64__) || defined(_M_ARM64)
 constexpr size_t kBranchAlign = 4;
 constexpr size_t kJumpBytes = 4;
@@ -47,7 +47,7 @@ constexpr size_t kJumpBytes = 4;
 constexpr size_t kBranchAlign = 1;
 constexpr size_t kJumpBytes = 5;
 #else
-#error "ferret v1 supports only x86_64 and aarch64"
+#error "ferret supports only x86_64 and aarch64"
 #endif
 
 }  // namespace

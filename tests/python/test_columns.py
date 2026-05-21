@@ -120,7 +120,7 @@ class TestHumanReadable:
         assert human_readable(-5) == "-5"
 
     def test_kilobyte_suffix(self):
-        assert human_readable(2048) == "2K"  # noqa: PLR2004
+        assert human_readable(2048) == "2K"
 
     def test_megabyte_suffix(self):
         assert human_readable(3 * (1 << 20)) == "3M"

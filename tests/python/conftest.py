@@ -23,14 +23,11 @@ _COMMON_DEFAULTS = {
     "metric": "auto",
     "stat": "min",
 }
-# `cmap` is registered per-kind by the migrating tasks (Tasks 5-7).
-# Listed here ahead of time so make_args(...) won't AttributeError
-# when those tasks land.
 _KIND_DEFAULTS = {
     "line": {"x": None, "xscale": None, "series": None, "ymax": None},
     "heatmap": {"x": None, "y": None, "logz": False, "cmap": None},
     "facets": {"facet": None, "x": None, "y": None, "logz": False, "cmap": None},
-    "surface": {"x": None, "y": None, "logz": False, "elev": 20.0, "azim": -13.0, "cmap": None},
+    "surface": {"x": None, "y": None, "logz": False, "elev": 20.0, "azim": -2.0, "cmap": None},
 }
 
 

@@ -1,7 +1,7 @@
 """Synthetic DataFrames mirroring ferret CSV output.
 
 One builder per registered benchmark. Column names and order match
-what CsvWriter (src/output/csv.cpp) emits.
+what the CSV writer emits.
 """
 
 from __future__ import annotations
@@ -80,8 +80,8 @@ def three_axis_df(
 ) -> pd.DataFrame:
     """Synthetic 3-axis frame: branches × spacing × variant.
 
-    'variant' stands in for a future option-as-axis case (e.g. a TAGE
-    predictor configuration). Not a real ferret column today.
+    'variant' stands in for an option-as-axis case (e.g. a TAGE
+    predictor configuration). Not a real ferret column.
     """
     rows = []
     for b in branches:

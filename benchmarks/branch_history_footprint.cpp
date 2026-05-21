@@ -39,7 +39,7 @@ constexpr size_t kMinSiteBytes = 8;
 #elif defined(__x86_64__) || defined(_M_X64)
 constexpr size_t kMinSiteBytes = 6;
 #else
-#error "ferret v1 supports only x86_64 and aarch64"
+#error "ferret supports only x86_64 and aarch64"
 #endif
 
 }  // namespace

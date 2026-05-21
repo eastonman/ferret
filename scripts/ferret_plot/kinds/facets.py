@@ -113,8 +113,8 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
             cmax=cmax,
             colorbar=dict(title=metric.label),
         ),
-        # NaN cells render transparent in plotly; match today's grey
-        # "missing" indication via a lightgrey plot background.
+        # NaN cells render transparent in plotly; the lightgrey
+        # background marks them as missing values.
         plot_bgcolor="lightgrey",
         margin=dict(l=60, r=20, t=80, b=60),
     )

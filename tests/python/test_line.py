@@ -58,13 +58,6 @@ class TestLineMakeFigure:
             line_kind.make_figure(df, _args(x="not_a_column"))
 
     def test_scattergl_used_for_large_point_count(self):
-        # Synthesize > 5000 total points across one series.
         df = dct_df(chain_lengths=tuple(range(_LARGE_POINTS + 100)))
         fig = line_kind.make_figure(df, _args())
-        # plotly's Scattergl trace has type "scattergl"; some versions
-        # promote to "scatter" — accept either as long as it's a gl variant.
-        assert isinstance(fig.data[0], (go.Scattergl, go.Scatter))
-        if isinstance(fig.data[0], go.Scatter) and fig.data[0].type != "scattergl":
-            # If it's just go.Scatter, the trace constructor must have been go.Scattergl
-            # at build time. Skip the type assertion in that edge case.
-            pass
+        assert fig.data[0].type == "scattergl"
