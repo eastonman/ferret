@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <memory>
 #include <vector>
 
 extern "C" {
@@ -10,20 +9,17 @@ extern "C" {
 }
 
 #include "ferret/benchmark.hpp"
+#include "sljit_test_helpers.hpp"
 
 namespace ferret::nested_call_depth_internal {
 // Exposed for unit testing; defined in benchmarks/nested_call_depth.cpp.
 std::vector<uint8_t> generate_path_table(size_t rows, size_t row_stride, uint64_t seed);
 }  // namespace ferret::nested_call_depth_internal
 
-namespace {
+using ferret::testing::CompilerHandle;
+using ferret::testing::find_option;
 
-const ferret::BenchOption* find_option(const ferret::BenchOptions& opts, const std::string& name) {
-  for (const auto& o : opts) {
-    if (o.name == name) return &o;
-  }
-  return nullptr;
-}
+namespace {
 
 ferret::Params make_params(int64_t depth, int64_t variant, int64_t path_table_rows) {
   ferret::Params p;
@@ -33,13 +29,6 @@ ferret::Params make_params(int64_t depth, int64_t variant, int64_t path_table_ro
   p.set("seed", 1);
   return p;
 }
-
-struct CompilerHandle {
-  sljit_compiler* c = sljit_create_compiler(nullptr);
-  ~CompilerHandle() {
-    if (c) sljit_free_compiler(c);
-  }
-};
 
 // ---- Registry / shape ----
 

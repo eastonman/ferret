@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <string>
 #include <vector>
 
 #include "ferret/benchmark.hpp"
+#include "sljit_test_helpers.hpp"
 
 extern "C" {
 #include <sljitLir.h>
@@ -38,19 +38,10 @@ ferret::Params make_params(int64_t branches, int64_t history_len, int64_t patter
   p.set("seed", 1);
   return p;
 }
-const ferret::BenchOption* find_option(const ferret::BenchOptions& opts, const std::string& name) {
-  for (const auto& o : opts) {
-    if (o.name == name) return &o;
-  }
-  return nullptr;
-}
-struct CompilerHandle {
-  sljit_compiler* c = sljit_create_compiler(nullptr);
-  ~CompilerHandle() {
-    if (c) sljit_free_compiler(c);
-  }
-};
 }  // namespace
+
+using ferret::testing::CompilerHandle;
+using ferret::testing::find_option;
 
 TEST(BranchHistoryFootprint, ExposesBranchesAndHistoryLenAxes) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
