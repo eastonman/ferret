@@ -20,6 +20,8 @@ namespace ferret {
 
 namespace {
 
+constexpr size_t kOpBudget = 10'000'000;
+
 // Per-arch layout strategy for each direct-branch site.
 //   kBranchAlign — required start-address alignment.
 //   kJumpBytes   — bytes the emitted jump occupies. Used as
@@ -86,7 +88,7 @@ struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return compute_iterations(10'000'000, p.get<size_t>("branches"));
+    return compute_iterations(kOpBudget, p.get<size_t>("branches"));
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
