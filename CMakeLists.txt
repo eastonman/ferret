@@ -187,19 +187,31 @@ add_library(ferret_core STATIC
   src/permute.cpp
 )
 target_include_directories(ferret_core PUBLIC include)
-target_link_libraries(ferret_core PUBLIC sljit::sljit spdlog::spdlog)
-target_link_libraries(ferret_core PRIVATE ferret_warnings)
+# spdlog is PUBLIC: log.hpp exposes spdlog::format_string_t in its template
+# signatures, so consumers need the header on their include path.
+# sljit is PRIVATE: only ferret_core .cpp files call into it; no public
+# header leaks sljit types into the API.
+target_link_libraries(ferret_core PUBLIC spdlog::spdlog)
+target_link_libraries(ferret_core PRIVATE sljit::sljit ferret_warnings)
 target_compile_features(ferret_core PUBLIC cxx_std_20)
+
+# Benchmark TUs compiled once; both the ferret executable and benchmark-
+# specific tests reuse the resulting object files.
+add_library(ferret_benchmarks OBJECT
+  benchmarks/branch_history_footprint.cpp
+  benchmarks/direct_branch_footprint.cpp
+  benchmarks/nested_call_depth.cpp
+  benchmarks/dependent_chain_throughput.cpp
+)
+target_link_libraries(ferret_benchmarks PRIVATE ferret_core sljit::sljit ferret_warnings)
 
 add_executable(ferret
   src/main.cpp
-  benchmarks/dependent_chain_throughput.cpp
-  benchmarks/direct_branch_footprint.cpp
-  benchmarks/nested_call_depth.cpp
-  benchmarks/branch_history_footprint.cpp
 )
+target_sources(ferret PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
 target_link_libraries(ferret PRIVATE
   ferret_core
+  ferret_benchmarks
   CLI11::CLI11
   sljit::sljit
   ferret_warnings
