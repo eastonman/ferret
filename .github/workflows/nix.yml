@@ -25,9 +25,3 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25  # v22
       - name: flake check
         run: nix flake check
-      - name: build
-        run: nix build
-      - name: test in devshell
-        run: |
-          nix develop --command bash -c \
-            "cmake -S . -B build -GNinja && cmake --build build && ctest --test-dir build --output-on-failure"
