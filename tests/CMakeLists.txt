@@ -82,6 +82,7 @@ gtest_discover_tests(test_runner)
 add_executable(test_padding test_padding.cpp)
 target_link_libraries(test_padding PRIVATE
   ferret_core
+  sljit::sljit
   GTest::gtest GTest::gtest_main
   ferret_warnings
 )
@@ -106,10 +107,11 @@ gtest_discover_tests(test_bench_helpers)
 
 add_executable(test_nested_call_depth
   test_nested_call_depth.cpp
-  ../benchmarks/nested_call_depth.cpp
 )
+target_sources(test_nested_call_depth PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
 target_link_libraries(test_nested_call_depth PRIVATE
   ferret_core
+  ferret_benchmarks
   sljit::sljit
   GTest::gtest GTest::gtest_main
 )
@@ -117,10 +119,11 @@ gtest_discover_tests(test_nested_call_depth)
 
 add_executable(test_branch_history_footprint
   test_branch_history_footprint.cpp
-  ../benchmarks/branch_history_footprint.cpp
 )
+target_sources(test_branch_history_footprint PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
 target_link_libraries(test_branch_history_footprint PRIVATE
   ferret_core
+  ferret_benchmarks
   sljit::sljit
   GTest::gtest GTest::gtest_main
 )
