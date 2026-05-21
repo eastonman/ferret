@@ -4,9 +4,7 @@
 #include <mach/thread_act.h>
 #include <mach/thread_policy.h>
 #include <pthread.h>
-#include <sys/mman.h>
 #include <sys/qos.h>
-#include <sys/resource.h>
 
 #include "ferret/log.hpp"
 
@@ -43,9 +41,5 @@ bool pin_to_core(int cpu) {
       kr, cpu);
   return true;
 }
-
-bool boost_priority() { return setpriority(PRIO_PROCESS, 0, -10) == 0; }
-
-bool lock_memory() { return mlockall(MCL_CURRENT | MCL_FUTURE) == 0; }
 
 }  // namespace ferret::pinning
