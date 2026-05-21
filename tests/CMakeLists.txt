@@ -1,5 +1,9 @@
 add_executable(test_smoke test_smoke.cpp)
-target_link_libraries(test_smoke PRIVATE GTest::gtest GTest::gtest_main)
+target_link_libraries(test_smoke PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+  ferret_warnings
+)
 gtest_discover_tests(test_smoke)
 
 add_executable(test_deps_link test_deps_link.cpp)
@@ -146,6 +150,14 @@ target_link_libraries(test_parse PRIVATE
   ferret_warnings
 )
 gtest_discover_tests(test_parse)
+
+add_executable(test_run_options test_run_options.cpp)
+target_link_libraries(test_run_options PRIVATE
+  ferret_core
+  GTest::gtest GTest::gtest_main
+  ferret_warnings
+)
+gtest_discover_tests(test_run_options)
 
 add_executable(test_integration test_integration.cpp)
 target_compile_definitions(test_integration PRIVATE

@@ -28,8 +28,8 @@ int main(int argc, char** argv) {
     auto* list_cmd = app.add_subcommand("list", "List registered benchmarks");
 
     auto* run_cmd = app.add_subcommand("run", "Run a benchmark");
-    std::string name;
-    run_cmd->add_option("name", name, "benchmark name")->required();
+    ferret::RunOptions opts{};
+    run_cmd->add_option("name", opts.name, "benchmark name")->required();
 
     // --log-level is attached to run_cmd, not app, because run_cmd uses
     // allow_extras() and would otherwise swallow it as an --<axis>= override.
@@ -38,23 +38,18 @@ int main(int argc, char** argv) {
         ->add_option("--log-level", log_level_str, "log level: trace|debug|info|warn|error|critical|off (default warn)")
         ->check(CLI::IsMember({"trace", "debug", "info", "warn", "warning", "error", "critical", "off"}));
 
-    std::string out_path;
-    run_cmd->add_option("--out", out_path, "CSV output path (default stdout)");
+    run_cmd->add_option("--out", opts.out_path, "CSV output path (default stdout)");
 
-    int core = -1;
-    run_cmd->add_option("--core", core, "core to pin to (default: no pin)");
+    run_cmd->add_option("--core", opts.core, "core to pin to (default: no pin)");
 
     std::string freq_str;
     run_cmd->add_option("--freq", freq_str, "core frequency, e.g. 4.521GHz; enables cycles_per_site columns");
 
-    int reps = 7;
-    run_cmd->add_option("--reps", reps, "number of timed repetitions per param point (default 7)");
+    run_cmd->add_option("--reps", opts.reps, "number of timed repetitions per param point (default 7)");
 
-    int warmup = 1;
-    run_cmd->add_option("--warmup", warmup, "warmup calls before each measurement (default 1)");
+    run_cmd->add_option("--warmup", opts.warmup, "warmup calls before each measurement (default 1)");
 
-    int64_t seed = 1;
-    run_cmd->add_option("--seed", seed, "RNG seed for benchmarks that randomize (default 1)");
+    run_cmd->add_option("--seed", opts.seed, "RNG seed for benchmarks that randomize (default 1)");
 
     run_cmd->allow_extras();
 
@@ -67,16 +62,15 @@ int main(int argc, char** argv) {
     }
 
     if (*run_cmd) {
-      if (reps < 1) {
-        flog::error("--reps must be >= 1 (got {})", reps);
+      if (opts.reps < 1) {
+        flog::error("--reps must be >= 1 (got {})", opts.reps);
         return 2;
       }
-      if (warmup < 0) {
-        flog::error("--warmup must be >= 0 (got {})", warmup);
+      if (opts.warmup < 0) {
+        flog::error("--warmup must be >= 0 (got {})", opts.warmup);
         return 2;
       }
 
-      ferret::RunOptions opts;
       try {
         opts.overrides = ferret::parse_extras(run_cmd->remaining());
       } catch (const std::exception& e) {
@@ -92,12 +86,6 @@ int main(int argc, char** argv) {
           return 2;
         }
       }
-      opts.name = name;
-      opts.out_path = out_path;
-      opts.core = core;
-      opts.reps = reps;
-      opts.warmup = warmup;
-      opts.seed = seed;
       return ferret::run(opts);
     }
 
