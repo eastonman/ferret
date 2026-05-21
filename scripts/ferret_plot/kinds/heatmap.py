@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import argparse
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
 from ferret_plot.columns import bench_name, resolve_metric
-from ferret_plot.errors import PlotError
 from ferret_plot.kinds._shared import (
-    _DEFAULT_CMAP,
+    assert_logz_positive,
     axis_ticks,
     build_heatmap_trace,
     prepare_grid,
@@ -27,12 +25,10 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     xcol, ycol = resolve_heatmap_xy(df, args, defaults)
     grid = prepare_grid(df, xcol=xcol, ycol=ycol, value_col=metric.column)
 
-    cmap = validate_cmap(args.cmap or _DEFAULT_CMAP)
+    cmap = validate_cmap(args.cmap)
 
     if args.logz:
-        z_all = grid.to_numpy(dtype=float)
-        if np.nanmin(z_all) <= 0:
-            raise PlotError("--logz requires positive metric values")
+        assert_logz_positive(grid.to_numpy(dtype=float))
 
     trace = build_heatmap_trace(
         grid,

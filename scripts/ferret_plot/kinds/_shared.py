@@ -15,7 +15,58 @@ from ferret_plot.formatting import decimate_indices, human_readable
 from ferret_plot.registry import BenchmarkDefaults
 
 _MISSING_PREVIEW_LIMIT = 5
-_DEFAULT_CMAP = "turbo"
+DEFAULT_CMAP = "turbo"
+
+
+def assert_logz_positive(values: np.ndarray, *, metric_label: str | None = None) -> None:
+    """Raise PlotError when --logz is requested but values contain non-positive entries."""
+    if np.nanmin(values) <= 0:
+        raise PlotError("--logz requires positive metric values")
+
+
+def hover_text_grid(
+    grid: pd.DataFrame,
+    *,
+    xcol: str,
+    ycol: str,
+    value_label: str,
+    z: np.ndarray,
+    transpose: bool = False,
+) -> np.ndarray:
+    """Build a 2D object array of per-cell hover strings.
+
+    Each cell reads ``"{xcol}={x_val}<br>{ycol}={y_val}<br>{value_label}={z:.3g}"``.
+    When ``transpose=False`` (default), the returned shape is ``(n_rows, n_cols)``
+    matching the heatmap trace convention.  When ``transpose=True``, the shape
+    is ``(n_cols, n_rows)`` to match the surface trace convention where plotly
+    indexes text as ``text[x_idx][y_idx]``.
+    """
+    n_rows, n_cols = z.shape
+    if transpose:
+        return np.array(
+            [
+                [
+                    f"{xcol}={human_readable(grid.columns[j])}"
+                    f"<br>{ycol}={human_readable(grid.index[i])}"
+                    f"<br>{value_label}={z[i, j]:.3g}"
+                    for i in range(n_rows)
+                ]
+                for j in range(n_cols)
+            ],
+            dtype=object,
+        )
+    return np.array(
+        [
+            [
+                f"{xcol}={human_readable(grid.columns[j])}"
+                f"<br>{ycol}={human_readable(grid.index[i])}"
+                f"<br>{value_label}={z[i, j]:.3g}"
+                for j in range(n_cols)
+            ]
+            for i in range(n_rows)
+        ],
+        dtype=object,
+    )
 
 
 def validate_cmap(cmap: str) -> str:
@@ -155,20 +206,7 @@ def build_heatmap_trace(  # noqa: PLR0913
     z = np.log10(z_raw) if logz else z_raw
     n_rows, n_cols = z_raw.shape
 
-    # np.array(..., dtype=object) preserves the 2D shape; a Python
-    # list-of-lists silently flattens when handed to plotly.
-    hover_text = np.array(
-        [
-            [
-                f"{xcol}={human_readable(grid.columns[j])}"
-                f"<br>{ycol}={human_readable(grid.index[i])}"
-                f"<br>{value_label}={z_raw[i, j]:.3g}"
-                for j in range(n_cols)
-            ]
-            for i in range(n_rows)
-        ],
-        dtype=object,
-    )
+    hover_text = hover_text_grid(grid, xcol=xcol, ycol=ycol, value_label=value_label, z=z_raw)
 
     common = dict(
         x=list(range(n_cols)),
