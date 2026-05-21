@@ -58,8 +58,8 @@ std::vector<int64_t> parse_cli_axis_value(const std::string& cli_value, const Ax
     try {
       return axis.expand_range(lo, hi, at_k);
     } catch (const std::invalid_argument& e) {
-      // Re-throw with the cli_value context that the old expand_range_token
-      // attached via its `context` parameter.
+      // Append the cli_value context so the diagnostic names the
+      // offending input token.
       throw std::invalid_argument(std::string(e.what()) + " (in: " + cli_value + ")");
     }
   }

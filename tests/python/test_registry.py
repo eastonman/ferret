@@ -74,7 +74,7 @@ class TestResolveDefaults:
 
 
 class TestBenchmarkDefaults:
-    """Verify the dataclass shape so future task changes don't silently drop fields."""
+    """Verify the dataclass exposes every expected default field."""
 
     def test_empty_defaults_have_all_none_fields(self):
         d = reg.BenchmarkDefaults()

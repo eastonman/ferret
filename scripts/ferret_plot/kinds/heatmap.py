@@ -51,8 +51,8 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
         title=f"{bench_name(df)}: {metric.label} ({ycol} × {xcol})",
         xaxis=dict(title=xcol, tickvals=x_tickvals, ticktext=x_ticktext),
         yaxis=dict(title=ycol, tickvals=y_tickvals, ticktext=y_ticktext),
-        # NaN cells render transparent in plotly. A lightgrey plot
-        # background gives them today's "missing" look.
+        # NaN cells render transparent in plotly; the lightgrey
+        # background marks them as missing values.
         plot_bgcolor="lightgrey",
         margin=dict(l=60, r=20, t=60, b=60),
     )

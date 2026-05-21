@@ -72,11 +72,10 @@ TEST(Integration, DirectBranchFootprintGeomRangeNonPow2Sweep) {
   std::filesystem::remove(out);
   // Branch range kept small. Larger ranges (e.g., 1024..4096@4) blow up
   // sljit on x86_64 because emit_nops emits one op_custom per byte of
-  // padding (src/padding.cpp:11-15) — at spacing=64 that is 59 ops per
-  // site, and the per-kernel op count grows past what sljit's metadata
-  // tracking handles. Fixing emit_nops to batch the NOPs is a separate
-  // issue. The values picked here exercise non-pow2 expansion and the
-  // CLI @k path end-to-end without tripping the underlying limit.
+  // padding — at spacing=64 that is 59 ops per site, and the per-kernel
+  // op count grows past what sljit's metadata tracking handles. The
+  // values picked here exercise non-pow2 expansion and the CLI @k path
+  // end-to-end without tripping the underlying limit.
   std::string cmd = std::string(FERRET_BINARY) +
                     " run direct_branch_footprint"
                     " --branches=64..256@2 --spacing_bytes=64"
@@ -255,8 +254,8 @@ TEST(Integration, NegativeBranchesExitsTwoNoCrash) {
 TEST(Integration, HugeBranchesExitsTwoNoCrash) {
   // Extreme positive value: log2 axis accepts it (positive), but the
   // benchmark allocator throws std::length_error / std::bad_alloc.
-  // do_run must catch and translate to exit 2 AND must not have leaked
-  // a CSV header to stdout (spec §7 class-1: no partial output).
+  // ferret::run must catch and translate to exit 2, and must not leak
+  // a CSV header to stdout (no partial output on user-error paths).
   auto out = std::filesystem::temp_directory_path() / "ferret_branchesHuge_out.txt";
   auto err = std::filesystem::temp_directory_path() / "ferret_branchesHuge_err.txt";
   std::filesystem::remove(out);
@@ -343,9 +342,9 @@ TEST(Integration, FreqNanExitsTwoNoCrash) {
 }
 
 TEST(Integration, NegativeChainLengthExitsTwoNoCrash) {
-  // chain_length=-1 was previously cast through size_t to a huge value,
-  // making the kernel loop run effectively forever. Params::get<size_t>
-  // now rejects negatives; do_run translates the throw into exit 2.
+  // chain_length=-1 must exit 2: Params::get<size_t> rejects negatives
+  // (otherwise the size_t conversion would yield a huge loop count)
+  // and ferret::run translates the throw into exit 2.
   // CTest enforces a per-test wall-clock timeout (set in
   // tests/CMakeLists.txt via gtest_discover_tests TIMEOUT property) so
   // a regression manifests as a CTest timeout rather than a hang —
@@ -410,9 +409,9 @@ void expect_spacing_rejected(const std::string& spacing_arg) {
 
 TEST(Integration, NestedCallDepthKEightStaticStillRunsCleanly) {
   // Same shape as the depth-1 smoke, but uses larger depths and asserts
-  // no empty cells. After Task 6 each body emits 8 call sites; this test
-  // protects against a regression where some of those sites fall through
-  // or are not properly wired.
+  // no empty cells. Each body emits 8 call sites; this test guards
+  // against a regression where some sites fall through or are not
+  // properly wired.
   auto out = std::filesystem::temp_directory_path() / "ferret_ncd_k8.csv";
   std::filesystem::remove(out);
   std::string cmd = std::string(FERRET_BINARY) +
@@ -489,7 +488,7 @@ TEST(Integration, NegativeSpacingBytesExitsTwoNoCrash) {
 
 TEST(Integration, ZeroChainLengthExitsTwoNoCrash) {
   // chain_length=0 yields sites_per_kernel=0, which would divide by
-  // zero in CSV normalization. do_run must reject the param point
+  // zero in CSV normalization. ferret::run must reject the param point
   // pre-flight with exit 2 and leave the output file empty.
   auto out = std::filesystem::temp_directory_path() / "ferret_chain0.csv";
   auto err = std::filesystem::temp_directory_path() / "ferret_chain0_err.txt";

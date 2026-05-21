@@ -9,8 +9,8 @@
 
 namespace ferret {
 
-// Insertion-ordered key/int64 map. v1 keeps all axis values as int64_t
-// because every benchmark axis is integral.
+// Insertion-ordered key/int64 map. All axis values are int64_t because
+// every benchmark axis is integral.
 class Params {
  public:
   // First insertion appends to the iteration order returned by keys();

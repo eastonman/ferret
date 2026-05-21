@@ -146,8 +146,9 @@ TEST(CliAxis, GeomRangeListSyntaxStillWorks) {
 }
 
 TEST(CliAxis, EmptyHiWithAtSuffixGivesMalformedRangeOnLog2) {
-  // Was: "@k only valid for geom_range" (misleading — the real issue
-  // is empty hi). After the fix, the tokenization failure wins.
+  // Empty hi (`1..@4`) reports the tokenization failure ("malformed
+  // range"), not "@k only valid for geom_range" — the missing hi is
+  // the real fault and its diagnostic must win.
   Axis branches = Axis::log2_range("branches", 1, 1 << 15);
   try {
     (void)parse_cli_axis_value("1..@4", branches);
