@@ -25,10 +25,14 @@ from typing import Any
 
 from ferret_plot.errors import PlotError
 
-_IMAGE_FORMATS = frozenset({"png", "svg", "pdf", "jpg", "jpeg", "webp"})
+_IMAGE_FORMATS = frozenset({"png", "svg", "pdf", "jpg", "webp"})
 _HTML_FORMATS = frozenset({"html"})
 _KNOWN_FORMATS = _IMAGE_FORMATS | _HTML_FORMATS
 _HTML_JS_MAP = {"cdn": "cdn", "inline": True, "sibling": "directory"}
+
+# Public names consumed by cli.py to keep choices in sync with this module.
+KNOWN_FORMATS = _KNOWN_FORMATS
+HTML_JS_CHOICES = list(_HTML_JS_MAP)
 
 # Names kaleido v1 checks on PATH for Chrome/Chromium.
 _CHROME_NAMES = (

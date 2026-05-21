@@ -11,10 +11,10 @@ import plotly.graph_objects as go
 
 from ferret_plot.columns import bench_name, resolve_metric
 from ferret_plot.errors import PlotError
-from ferret_plot.formatting import human_readable
 from ferret_plot.kinds._shared import (
-    _DEFAULT_CMAP,
+    assert_logz_positive,
     axis_ticks,
+    hover_text_grid,
     prepare_grid,
     resolve_heatmap_xy,
     validate_cmap,
@@ -50,7 +50,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     grid = prepare_grid(df, xcol=xcol, ycol=ycol, value_col=metric.column, require_complete=True)
     z = _z_values(grid)
 
-    cmap = validate_cmap(args.cmap or _DEFAULT_CMAP)
+    cmap = validate_cmap(args.cmap)
 
     # Quantize the surface color to integer steps so the colormap
     # paints discrete bands (one per integer of the colored quantity)
@@ -58,8 +58,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     # the color is stepped. Contour lines drawn at the same integers
     # mark the boundaries crisply.
     if args.logz:
-        if np.nanmin(z) <= 0:
-            raise PlotError("--logz requires positive metric values")
+        assert_logz_positive(z)
         color_source = np.log10(z)
     else:
         color_source = z
@@ -70,26 +69,12 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     x_positions = np.arange(len(grid.columns))
     y_positions = np.arange(len(grid.index))
 
-    n_rows = len(grid.index)
-    n_cols = len(grid.columns)
     # Per-cell hover text. Plotly's Surface trace indexes the text
-    # array as text[x_idx][y_idx] at the hovered point — the OPPOSITE
-    # of the (y, x) order it uses for z. So we build text shape
-    # (n_cols, n_rows) where the OUTER axis maps to surface.x (grid
-    # columns / xcol values) and INNER axis maps to surface.y (grid
-    # index / ycol values). np.array(..., dtype=object) preserves the
-    # 2D shape — a plain list-of-lists would silently flatten.
-    hover_text = np.array(
-        [
-            [
-                f"{xcol}={human_readable(grid.columns[j])}"
-                f"<br>{ycol}={human_readable(grid.index[i])}"
-                f"<br>{metric.label}={z[i, j]:.3g}"
-                for i in range(n_rows)
-            ]
-            for j in range(n_cols)
-        ],
-        dtype=object,
+    # array as text[x_idx][y_idx] — the OPPOSITE of the (y, x) order
+    # it uses for z.  transpose=True builds shape (n_cols, n_rows)
+    # where the outer axis maps to surface.x and the inner to surface.y.
+    hover_text = hover_text_grid(
+        grid, xcol=xcol, ycol=ycol, value_label=metric.label, z=z, transpose=True
     )
 
     surface = go.Surface(
