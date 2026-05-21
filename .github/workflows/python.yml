@@ -26,3 +26,77 @@ jobs:
 
       - name: run ferret_plot pytest suite (in devshell)
         run: nix develop --command ./scripts/test_py.sh
+
+  png-integration:
+    # Exercise the kaleido PNG path end-to-end on three environments:
+    #   - linux-nix: Nix devshell, kaleido 0.2.1 from nixpkgs + pkgs.chromium
+    #   - linux-pip: ubuntu-latest with pip kaleido>=1.0 + preinstalled
+    #     google-chrome-stable on the runner image
+    #   - macos-pip: macos-latest with pip kaleido>=1.0 + preinstalled
+    #     Google Chrome.app
+    # Surface PNG triggers the WebGL/SwiftShader fallback in output.py;
+    # heatmap PNG goes through the standard kaleido canvas path.
+    name: png-integration (${{ matrix.label }})
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-nix
+            os: ubuntu-latest
+            via: nix
+          - label: linux-pip
+            os: ubuntu-latest
+            via: pip
+          - label: macos-pip
+            os: macos-latest
+            via: pip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: install Nix
+        if: matrix.via == 'nix'
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25  # v22
+
+      - name: setup Python
+        if: matrix.via == 'pip'
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: install Python deps (pip)
+        if: matrix.via == 'pip'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: locate Chrome / Chromium
+        shell: bash
+        run: |
+          # Fail fast if no headless Chrome is reachable. Mirrors the
+          # search performed by ferret_plot.output._find_chrome_executable
+          # so a passing probe here means the test gate won't skip.
+          mac_chrome="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          for name in chromium chromium-browser chrome Chrome google-chrome google-chrome-stable; do
+            if command -v "$name" >/dev/null 2>&1; then
+              echo "found $(command -v "$name")"
+              exit 0
+            fi
+          done
+          if [ -x "$mac_chrome" ]; then
+            echo "found $mac_chrome"
+            exit 0
+          fi
+          echo "::error::no Chrome/Chromium binary on PATH or in /Applications"
+          exit 1
+
+      - name: run integration tests (nix devshell)
+        if: matrix.via == 'nix'
+        run: nix develop --command python3 -m pytest tests/python -m integration -v
+
+      - name: run integration tests (pip)
+        if: matrix.via == 'pip'
+        run: python -m pytest tests/python -m integration -v

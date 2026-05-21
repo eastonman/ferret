@@ -202,7 +202,7 @@ def _write_chromium_webgl_png(fig: Any, out: str, *, width: int, height: int) ->
             f"file://{html_path}",
         ]
         try:
-            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
+            subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=30)
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             detail = getattr(e, "stderr", "") or str(e)
             raise PlotError(f"surface PNG WebGL export failed: {detail}") from e
