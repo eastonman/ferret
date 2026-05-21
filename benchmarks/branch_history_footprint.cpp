@@ -21,6 +21,8 @@ struct BranchHistoryFootprint;  // forward decl for internal namespace ref
 
 namespace {
 
+constexpr size_t kOpBudget = 10'000'000;
+
 // Floor on the bytes a single site (load + cmp-and-branch) can occupy
 // across all sljit encodings on this arch. Used to pick the NOP count
 // per site as `spacing - kMinSiteBytes` so the chain stride is always
@@ -105,7 +107,7 @@ struct BranchHistoryFootprint : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("branches"); }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return compute_iterations(10'000'000, p.get<size_t>("branches"));
+    return compute_iterations(kOpBudget, p.get<size_t>("branches"));
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override;

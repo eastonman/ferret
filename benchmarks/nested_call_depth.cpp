@@ -10,12 +10,16 @@ extern "C" {
 
 #include "ferret/bench_helpers.hpp"
 #include "ferret/benchmark.hpp"
+#include "ferret/permute.hpp"
 
 namespace ferret {
 
 namespace {
 // K for variant 2 (path-table dispatch). Defines the binary-tree width.
 constexpr int kK = 8;
+// call/ret cycles are heavier than single branches, so this benchmark uses
+// a smaller op budget than the branch footprint benchmarks.
+constexpr size_t kOpBudget = 1'000'000;
 }  // namespace
 
 namespace nested_call_depth_internal {
@@ -324,7 +328,7 @@ struct NestedCallDepth : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("depth") + 1; }
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
-    return compute_iterations(1'000'000, p.get<size_t>("depth") + 1);
+    return compute_iterations(kOpBudget, p.get<size_t>("depth") + 1);
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
@@ -361,12 +365,8 @@ struct NestedCallDepth : Benchmark {
     }
 
     auto rows = static_cast<size_t>(path_table_rows);
-    // Combine seed and depth via std::seed_seq so distinct sweep points
-    // produce distinct dispatch tables without any hand-rolled mixing.
-    auto seed = p.get<int64_t>("seed");
-    std::seed_seq seq{static_cast<uint32_t>(seed), static_cast<uint32_t>(seed >> 32), static_cast<uint32_t>(depth)};
-    std::mt19937_64 mixer(seq);
-    uint64_t mixed = mixer();
+    auto seed = static_cast<uint64_t>(p.get<int64_t>("seed"));
+    uint64_t mixed = mix_seed(seed, static_cast<uint64_t>(depth), 0);
     path_tables_.push_back(nested_call_depth_internal::generate_path_table(rows, depth + 1, mixed));
     emit_variant2_path_table(c, depth, iters, rows, path_tables_.back().data());
   }
