@@ -14,13 +14,31 @@ import pandas as pd
 
 from ferret_plot import output
 from ferret_plot.errors import PlotError
-from ferret_plot.kinds import facets as facets_kind
-from ferret_plot.kinds import heatmap as heatmap_kind
-from ferret_plot.kinds import line as line_kind
-from ferret_plot.kinds import surface as surface_kind
-from ferret_plot.kinds._shared import DEFAULT_CMAP
+
+# The string value; avoids importing _shared (which pulls in plotly) at startup.
+_DEFAULT_CMAP = "turbo"
 
 EXIT_USER_ERROR = 2
+
+
+def _line_handler(df, args):
+    from ferret_plot.kinds.line import make_figure
+    return make_figure(df, args)
+
+
+def _heatmap_handler(df, args):
+    from ferret_plot.kinds.heatmap import make_figure
+    return make_figure(df, args)
+
+
+def _surface_handler(df, args):
+    from ferret_plot.kinds.surface import make_figure
+    return make_figure(df, args)
+
+
+def _facets_handler(df, args):
+    from ferret_plot.kinds.facets import make_figure
+    return make_figure(df, args)
 
 
 def _add_common(sp: argparse.ArgumentParser) -> None:
@@ -62,15 +80,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     line.add_argument("--series", default=None, help="comma-separated columns to use as series grouping")
     line.add_argument("--ymax", type=float, default=None, help="upper limit for the Y axis")
-    line.set_defaults(handler=line_kind.make_figure)
+    line.set_defaults(handler=_line_handler)
 
     heat = sub.add_parser("heatmap", help="2D heatmap over two varying axes")
     _add_common(heat)
     heat.add_argument("--x", default=None, help="X-axis column")
     heat.add_argument("--y", default=None, help="Y-axis column")
     heat.add_argument("--logz", action="store_true", help="log color scale")
-    heat.add_argument("--cmap", default=DEFAULT_CMAP, help=f"colorscale name (default: {DEFAULT_CMAP}, high-contrast)")
-    heat.set_defaults(handler=heatmap_kind.make_figure)
+    heat.add_argument("--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast)")
+    heat.set_defaults(handler=_heatmap_handler)
 
     surface = sub.add_parser("surface", help="3D surface over two varying axes")
     _add_common(surface)
@@ -79,8 +97,8 @@ def build_parser() -> argparse.ArgumentParser:
     surface.add_argument("--logz", action="store_true", help="log color scale")
     surface.add_argument("--elev", type=float, default=20.0, help="3D camera elevation angle")
     surface.add_argument("--azim", type=float, default=-2.0, help="3D camera azimuth angle")
-    surface.add_argument("--cmap", default=DEFAULT_CMAP, help=f"colorscale name (default: {DEFAULT_CMAP}, high-contrast perceptual)")
-    surface.set_defaults(handler=surface_kind.make_figure)
+    surface.add_argument("--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast perceptual)")
+    surface.set_defaults(handler=_surface_handler)
 
     fac = sub.add_parser("facets", help="grid of heatmaps over >=3 varying axes")
     _add_common(fac)
@@ -88,8 +106,8 @@ def build_parser() -> argparse.ArgumentParser:
     fac.add_argument("--x", default=None, help="X-axis column (per subplot)")
     fac.add_argument("--y", default=None, help="Y-axis column (per subplot)")
     fac.add_argument("--logz", action="store_true", help="log color scale")
-    fac.add_argument("--cmap", default=DEFAULT_CMAP, help=f"colorscale name (default: {DEFAULT_CMAP}, high-contrast)")
-    fac.set_defaults(handler=facets_kind.make_figure)
+    fac.add_argument("--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast)")
+    fac.set_defaults(handler=_facets_handler)
 
     return ap
 
