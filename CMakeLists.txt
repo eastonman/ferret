@@ -175,6 +175,7 @@ add_library(ferret_core STATIC
   src/jit.cpp
   ${ferret_arch_timing_src}
   src/timing/calibrate.cpp
+  src/pinning/posix_common.cpp
   ${ferret_os_pinning_src}
   src/benchmark_registry.cpp
   src/csv.cpp
