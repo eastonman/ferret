@@ -17,14 +17,6 @@ def _fig() -> go.Figure:
     return go.Figure(data=[go.Scatter(x=[0, 1], y=[0, 1])])
 
 
-@pytest.fixture(autouse=True)
-def _clear_chrome_cache():
-    """Bust the cached chrome probe so tests don't leak state across order."""
-    output._chrome_probe_cache.clear()
-    yield
-    output._chrome_probe_cache.clear()
-
-
 class TestEmitFormatResolution:
     def test_html_extension_routes_to_write_html(self, tmp_path, monkeypatch):
         fig = _fig()

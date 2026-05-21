@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from ferret_plot import cli, output
+from ferret_plot import cli
 from ferret_plot.cli import EXIT_USER_ERROR
 from fixtures import dbf_df, dct_df, tage_capacity_df, three_axis_df
 
@@ -21,35 +21,17 @@ def _write_csv(df, tmp_path: Path, name: str) -> str:
 
 
 class TestLineSubcommand:
-    def test_line_produces_png(self, tmp_path, monkeypatch):
+    def test_line_produces_png(self, tmp_path, fake_png_export):
         csv_path = _write_csv(dbf_df(), tmp_path, "btb.csv")
         out_path = tmp_path / "out.png"
-
-        def fake_write_image(self, path, **kwargs):
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(["line", csv_path, "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
         assert out_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
-    def test_line_with_spacing_bytes_x(self, tmp_path, monkeypatch):
+    def test_line_with_spacing_bytes_x(self, tmp_path, fake_png_export):
         csv_path = _write_csv(dbf_df(), tmp_path, "btb.csv")
         out_path = tmp_path / "out.png"
-
-        def fake_write_image(self, path, **kwargs):
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(["line", csv_path, "--x", "spacing_bytes", "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
@@ -65,35 +47,17 @@ class TestLineSubcommand:
 
 
 class TestHeatmapSubcommand:
-    def test_heatmap_produces_png(self, tmp_path, monkeypatch):
+    def test_heatmap_produces_png(self, tmp_path, fake_png_export):
         csv_path = _write_csv(dbf_df(), tmp_path, "btb.csv")
         out_path = tmp_path / "heat.png"
-
-        def fake_write_image(self, path, **kwargs):
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(["heatmap", csv_path, "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
         assert out_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
-    def test_heatmap_with_explicit_xy(self, tmp_path, monkeypatch):
+    def test_heatmap_with_explicit_xy(self, tmp_path, fake_png_export):
         csv_path = _write_csv(dbf_df(), tmp_path, "btb.csv")
         out_path = tmp_path / "heat-xy.png"
-
-        def fake_write_image(self, path, **kwargs):
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(["heatmap", csv_path, "--x", "spacing_bytes", "--y", "branches", "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
@@ -109,22 +73,9 @@ class TestSurfaceSubcommand:
         assert args.elev == _SURFACE_ELEV_DEFAULT
         assert args.azim == _SURFACE_AZIM_DEFAULT
 
-    def test_surface_produces_png(self, tmp_path, monkeypatch):
+    def test_surface_produces_png(self, tmp_path, fake_png_export):
         csv_path = _write_csv(tage_capacity_df(), tmp_path, "tage.csv")
         out_path = tmp_path / "surface.png"
-
-        captured = {}
-
-        def fake_write_image(self, path, **kwargs):
-            captured["path"] = path
-            captured["kwargs"] = kwargs
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(
             [
                 "surface",
@@ -140,7 +91,7 @@ class TestSurfaceSubcommand:
         assert rc == 0
         assert out_path.exists()
         assert out_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
-        assert captured["kwargs"]["format"] == "png"
+        assert fake_png_export["kwargs"]["format"] == "png"
 
     def test_surface_invalid_axis_exits_2(self, tmp_path, capsys):
         csv_path = _write_csv(tage_capacity_df(), tmp_path, "tage.csv")
@@ -161,18 +112,9 @@ class TestSurfaceSubcommand:
 
 
 class TestFacetsSubcommand:
-    def test_facets_produces_png(self, tmp_path, monkeypatch):
+    def test_facets_produces_png(self, tmp_path, fake_png_export):
         csv_path = _write_csv(three_axis_df(variants=("a", "b", "c")), tmp_path, "3ax.csv")
         out_path = tmp_path / "facets.png"
-
-        def fake_write_image(self, path, **kwargs):
-            with open(path, "wb") as f:
-                f.write(b"\x89PNG\r\n\x1a\n" + b"\x00" * 16)
-
-        monkeypatch.setattr(output, "_chrome_available", lambda: True)
-        output._chrome_probe_cache.clear()
-        monkeypatch.setattr("plotly.graph_objects.Figure.write_image", fake_write_image)
-
         rc = cli.main(["facets", csv_path, "--facet", "variant", "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
