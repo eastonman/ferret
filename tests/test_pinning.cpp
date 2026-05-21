@@ -1,29 +1,27 @@
 #include <gtest/gtest.h>
 
+#include <unistd.h>
+
 #include "ferret/pinning.hpp"
 
 using namespace ferret;
 
-// All operations are best-effort. The contract is: returns bool, never
-// throws or aborts. We don't assert success because CI runners may
-// forbid setpriority/mlockall/affinity.
-
-TEST(Pinning, PinToCoreReturnsBool) {
-  bool ok = pinning::pin_to_core(0);
-  (void)ok;
-  SUCCEED();
+TEST(Pinning, PinToExistingCoreSucceeds) {
+  EXPECT_TRUE(pinning::pin_to_core(0));
 }
 
-TEST(Pinning, BoostPriorityReturnsBool) {
-  bool ok = pinning::boost_priority();
-  (void)ok;
-  SUCCEED();
+TEST(Pinning, BoostPriorityRequiresPrivilege) {
+  if (geteuid() != 0) {
+    GTEST_SKIP() << "setpriority(-10) requires root; skipping in unprivileged CI";
+  }
+  EXPECT_TRUE(pinning::boost_priority());
 }
 
-TEST(Pinning, LockMemoryReturnsBool) {
-  bool ok = pinning::lock_memory();
-  (void)ok;
-  SUCCEED();
+TEST(Pinning, LockMemoryRequiresPrivilege) {
+  if (geteuid() != 0) {
+    GTEST_SKIP() << "mlockall requires CAP_IPC_LOCK; skipping in unprivileged CI";
+  }
+  EXPECT_TRUE(pinning::lock_memory());
 }
 
 TEST(Pinning, PinToImpossiblyHighCoreReturnsFalse) {
