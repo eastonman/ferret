@@ -15,9 +15,11 @@ so users don't see kaleido's internal traceback. Result is cached.
 
 from __future__ import annotations
 
+import atexit
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import webbrowser
 from pathlib import Path
@@ -228,6 +230,14 @@ def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
         if out is None:
             with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as tmp:
                 out_path = tmp.name
+
+            def _unlink_temp(path: str) -> None:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+
+            atexit.register(_unlink_temp, out_path)
         else:
             out_path = out
         fig.write_html(
@@ -236,7 +246,9 @@ def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
             full_html=True,
         )
         if out is None:
-            webbrowser.open(f"file://{out_path}")
+            opened = webbrowser.open(f"file://{out_path}")
+            if not opened:
+                print(f"plot.py: no browser available; HTML written to {out_path}", file=sys.stderr)
         return
 
     # Image format => kaleido path. Probe Chrome first.
