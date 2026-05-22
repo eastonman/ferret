@@ -27,7 +27,8 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-Full build options, sanitizer matrix, and non-Nix recipes: [`docs/build.md`](docs/build.md).
+Full build options, sanitizer matrix, Android cross-build workflow, and non-Nix recipes:
+[`docs/build.md`](docs/build.md), [`docs/android.md`](docs/android.md).
 
 ## The two-step cycle workflow
 
@@ -124,6 +125,7 @@ responsibility:
 - [`AGENTS.md`](AGENTS.md) — operational checklist for contributors and agentic workers (pre-PR commands, conventions, CI gates, footguns).
 - [`docs/architecture.md`](docs/architecture.md) — codebase overview and module map.
 - [`docs/build.md`](docs/build.md) — full build, sanitizer matrix, single-test recipes.
+- [`docs/android.md`](docs/android.md) — Android NDK cross-build and manual adb execution workflow.
 - [`docs/cli.md`](docs/cli.md) — global CLI flags and axis syntax.
 - [`docs/benchmarks/`](docs/benchmarks/) — per-benchmark kernel structure and options.
 - [`docs/writing-a-benchmark.md`](docs/writing-a-benchmark.md) — guide for adding a new benchmark.

@@ -7,6 +7,7 @@ These docs reflect current behavior. Edit them when behavior changes.
 - [`../AGENTS.md`](../AGENTS.md) — operational checklist for contributors and agentic workers (pre-PR commands, conventions, CI gates, footguns).
 - [`architecture.md`](architecture.md) — codebase overview and module map.
 - [`build.md`](build.md) — dependency requirements, Nix/CMake recipes, sanitizer matrix, single-test recipes.
+- [`android.md`](android.md) — Android NDK cross-build and manual adb execution workflow.
 - [`cli.md`](cli.md) — global `ferret run` flags and axis syntax.
 - [`writing-a-benchmark.md`](writing-a-benchmark.md) — guide for adding a new benchmark.
 - [`contributing.md`](contributing.md) — formatters and linters (points to AGENTS.md).
