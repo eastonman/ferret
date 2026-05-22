@@ -31,6 +31,13 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
+## Android cross-build
+
+Android uses the NDK CMake toolchain and a separate target build tree.
+Do not reuse the canonical host `build/` tree for Android. See
+[`android.md`](android.md) for the full cross-build and manual adb
+execution workflow.
+
 Scripts under `scripts/` need `numpy`, `pandas`, `plotly>=6.1.1`, and
 `kaleido>=1.0` (pytest + ruff for tests). Nix users get these via
 `flake.nix`; otherwise:
