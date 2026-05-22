@@ -84,6 +84,33 @@ class TestChromeProbe:
             output.emit(fig, out=str(tmp_path / "x.png"), fmt=None, html_js="cdn")
 
 
+class TestNonCanvasValueError:
+    def test_non_canvas_value_error_becomes_plot_error(self, tmp_path, monkeypatch):
+        fig = _fig()
+
+        def fail_write_image(*_args, **_kwargs):
+            raise ValueError("kaleido internal: unexpected codec failure")
+
+        monkeypatch.setattr(output, "_chrome_available", lambda: True)
+        monkeypatch.setattr(fig, "write_image", fail_write_image)
+
+        with pytest.raises(PlotError, match="image export failed"):
+            output.emit(fig, out=str(tmp_path / "x.png"), fmt=None, html_js="cdn")
+
+    def test_non_canvas_value_error_preserves_original_text(self, tmp_path, monkeypatch):
+        fig = _fig()
+        original_msg = "kaleido: some unexpected internal problem"
+
+        def fail_write_image(*_args, **_kwargs):
+            raise ValueError(original_msg)
+
+        monkeypatch.setattr(output, "_chrome_available", lambda: True)
+        monkeypatch.setattr(fig, "write_image", fail_write_image)
+
+        with pytest.raises(PlotError, match=original_msg):
+            output.emit(fig, out=str(tmp_path / "x.png"), fmt=None, html_js="cdn")
+
+
 class TestSurfaceWebglFallback:
     def test_surface_png_uses_chromium_webgl_when_kaleido_canvas_fails(self, tmp_path, monkeypatch):
         fig = go.Figure(data=[go.Surface(z=[[1.0, 2.0], [3.0, 4.0]])])

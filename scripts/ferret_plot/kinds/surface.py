@@ -12,6 +12,7 @@ import plotly.graph_objects as go
 from ferret_plot.columns import bench_name, resolve_metric
 from ferret_plot.errors import PlotError
 from ferret_plot.kinds._shared import (
+    assert_finite_metric,
     assert_logz_positive,
     axis_ticks,
     hover_text_grid,
@@ -243,6 +244,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     xcol, ycol = resolve_heatmap_xy(df, args, defaults)
     grid = prepare_grid(df, xcol=xcol, ycol=ycol, value_col=metric.column, require_complete=True)
     z = _z_values(grid)
+    assert_finite_metric(z, metric.column)
 
     cmap = validate_cmap(args.cmap)
 

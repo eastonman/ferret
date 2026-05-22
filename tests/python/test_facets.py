@@ -47,6 +47,18 @@ class TestFacetsMakeFigure:
         with pytest.raises(PlotError, match="same as --facet"):
             facets_kind.make_figure(df, _args(facet="variant", x="variant"))
 
+    def test_logz_rejects_non_positive_metric(self):
+        df = three_axis_df(variants=("a", "b"))
+        df.loc[df.index[0], "cycles_per_site_min"] = 0.0
+        with pytest.raises(PlotError, match="--logz requires"):
+            facets_kind.make_figure(df, _args(facet="variant", logz=True))
+
+    def test_logz_rejects_negative_metric(self):
+        df = three_axis_df(variants=("a", "b"))
+        df["cycles_per_site_min"] = -0.5
+        with pytest.raises(PlotError, match="--logz requires"):
+            facets_kind.make_figure(df, _args(facet="variant", logz=True))
+
     def test_invalid_cmap_raises(self):
         df = three_axis_df(variants=("a", "b"))
         with pytest.raises(PlotError, match="not a valid colorscale"):

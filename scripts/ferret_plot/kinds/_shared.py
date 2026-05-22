@@ -18,10 +18,17 @@ _MISSING_PREVIEW_LIMIT = 5
 DEFAULT_CMAP = "turbo"
 
 
+def assert_finite_metric(values: np.ndarray, metric_col: str) -> None:
+    """Raise PlotError when a metric column contains no finite values."""
+    if not np.any(np.isfinite(values)):
+        raise PlotError(f"metric column {metric_col!r} contains no finite values; cannot plot")
+
+
 def assert_logz_positive(values: np.ndarray, *, metric_label: str | None = None) -> None:
     """Raise PlotError when --logz is requested but values contain non-positive entries."""
-    if np.nanmin(values) <= 0:
-        raise PlotError("--logz requires positive metric values")
+    finite = values[np.isfinite(values)]
+    if len(finite) == 0 or np.any(finite <= 0):
+        raise PlotError("--logz requires at least one finite positive value")
 
 
 def hover_text_grid(  # noqa: PLR0913
