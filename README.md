@@ -121,9 +121,10 @@ responsibility:
 
 ## Documentation
 
+- [`AGENTS.md`](AGENTS.md) — operational checklist for contributors and agentic workers (pre-PR commands, conventions, CI gates, footguns).
 - [`docs/architecture.md`](docs/architecture.md) — codebase overview and module map.
-- [`docs/build.md`](docs/build.md) — full build, sanitizer matrix.
+- [`docs/build.md`](docs/build.md) — full build, sanitizer matrix, single-test recipes.
 - [`docs/cli.md`](docs/cli.md) — global CLI flags and axis syntax.
 - [`docs/benchmarks/`](docs/benchmarks/) — per-benchmark kernel structure and options.
 - [`docs/writing-a-benchmark.md`](docs/writing-a-benchmark.md) — guide for adding a new benchmark.
-- [`docs/contributing.md`](docs/contributing.md) — formatting and linting.
+- [`docs/contributing.md`](docs/contributing.md) — formatting and linting (points to AGENTS.md).

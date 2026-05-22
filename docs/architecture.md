@@ -28,6 +28,9 @@ alphabetical; each line is one sentence on responsibility.
 
 - `axis.hpp` — declarative parameter axis (Range / Log2Range /
   GeomRange / Values) used by benchmarks to describe what to sweep.
+- `bench_helpers.hpp` — JIT-time helpers for benchmark TUs:
+  `emit_outer_loop`, `compute_iterations`, `verify_uniform_spacing`.
+  Pulls in `sljitLir.h`; not for use from non-JIT public headers.
 - `benchmark.hpp` — base class benchmark authors subclass, plus the
   registry and registration macro.
 - `cli_axis.hpp` — parses CLI values like `1..32768`, `16,32,64`, or
@@ -36,12 +39,15 @@ alphabetical; each line is one sentence on responsibility.
   ostream.
 - `freq.hpp` — parses `--freq=4.521GHz` and similar suffixed numbers
   into hertz.
-- `jit.hpp` — RAII handle for an sljit-compiled kernel.
+- `jit.hpp` — RAII handle for an sljit-compiled kernel; calls
+  `verify_layout` post-codegen.
 - `log.hpp` — spdlog-backed logger aliased as `flog::` at every use
   site (avoids the `::log(double)` collision from `<math.h>`).
 - `padding.hpp` — emits architecture-correct NOPs to pad branch sites.
 - `params.hpp` — insertion-ordered key/int64 map carrying one parameter
   point through the runner and into the CSV.
+- `parse.hpp` — `parse_int()`: shared low-level integer parser used by
+  `cli_axis.cpp` and other consumers.
 - `permute.hpp` — Sattolo's algorithm, a single Hamiltonian cycle over
   `{0..n-1}`, used by benchmarks that want to defeat sequential
   prefetch.
@@ -55,9 +61,31 @@ alphabetical; each line is one sentence on responsibility.
 - `timing.hpp` — per-arch `arch_now_ticks()` (rdtscp on x86_64,
   cntvct_el0 on aarch64) and a lazily-calibrated `ticks_per_ns()`.
 
+## Source layout
+
+`src/` is mostly a flat mirror of `include/ferret/` (one `.cpp` per
+header). Three subdirectories carry arch- or OS-conditional code that
+`CMakeLists.txt` selects at configure time:
+
+- `src/timing/` — `x86_64.cpp` (`rdtscp`) **or** `aarch64.cpp`
+  (`cntvct_el0`), plus the shared `calibrate.cpp`. AArch64 reads the
+  exact frequency from `cntfrq_el0`; x86_64 calibrates against a short
+  wall-clock sleep, so its `ticks_per_ns()` is approximate (±1%
+  depending on scheduler jitter).
+- `src/pinning/` — `posix_common.cpp` for `boost_priority` /
+  `lock_memory`, plus `linux.cpp` (`pthread_setaffinity_np`) **or**
+  `macos.cpp` (`thread_policy_set` with a P-cluster QoS fallback —
+  Apple Silicon does not implement per-core affinity; see the README's
+  discipline section).
+- `src/padding/` — `x86_64.cpp` **or** `aarch64.cpp`, each emitting the
+  arch-correct NOP encoding for `emit_nops`.
+
+`benchmarks/` holds one `.cpp` per benchmark, compiled into the
+`ferret_benchmarks` OBJECT library (see `writing-a-benchmark.md`).
+
 ## Adding a benchmark
 
-See `writing-a-benchmark.md`. The two existing benchmarks under
+See `writing-a-benchmark.md`. The four existing benchmarks under
 `benchmarks/` are worked examples of the frequency-probe and
 parameter-sweep patterns.
 

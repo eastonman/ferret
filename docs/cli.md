@@ -14,7 +14,7 @@ ferret run <name> [options] [--<axis>=value-or-range] [--<benchmark-option>=v]
   --freq=4.521GHz   running frequency, enables cycle columns
   --reps=K          repetitions per param point (default 7)
   --warmup=W        un-timed calls before measurement (default 1)
-  --log-level=L     trace|debug|info|warn|error|critical|off (default warn)
+  --log-level=L     trace|debug|info|warn(=warning)|error|critical|off (default warn)
   --seed=S          RNG seed for benchmarks that randomize (default 1)
 ```
 
@@ -51,13 +51,13 @@ Prints every registered benchmark name.
 
 ## Listing axes and options of a benchmark
 
-Pass an unknown axis to surface the declared ones:
-
-```sh
-build/ferret run direct_branch_footprint --bogus=1
-```
-
-The runner reports the accepted axes and options before exiting.
+The runtime does not currently introspect a benchmark's axes or
+options for the user — passing an unknown `--<flag>=<v>` prints
+`unknown axis or option --<flag> for benchmark <name>` to stderr and
+exits with status 2, without listing the accepted ones. To see what a
+benchmark accepts, read its page under
+[`docs/benchmarks/`](benchmarks/), or `grep` the benchmark's `.cpp`
+for the `axes()` and `options()` overrides.
 
 ## Plot subcommands
 
