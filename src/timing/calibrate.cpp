@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-#if defined(__linux__)
+#ifdef __linux__
 #include <sched.h>
 
 #include "ferret/log.hpp"
@@ -24,7 +24,7 @@ double calibrate() {
   // Calibration accuracy depends on the caller having stable affinity; if
   // pinning fails, the measurement proceeds but a post-sleep migration check
   // will warn if the thread moved.
-#if defined(__linux__)
+#ifdef __linux__
   int cpu_before = sched_getcpu();
   if (cpu_before >= 0) {
     if (!ferret::pinning::pin_to_core(cpu_before)) {
@@ -40,7 +40,7 @@ double calibrate() {
   uint64_t t1 = arch_now_ticks();
   auto wall_end = clock::now();
 
-#if defined(__linux__)
+#ifdef __linux__
   if (cpu_before >= 0) {
     int cpu_after = sched_getcpu();
     if (cpu_after >= 0 && cpu_after != cpu_before) {
