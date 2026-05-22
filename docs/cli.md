@@ -65,10 +65,10 @@ for the `axes()` and `options()` overrides.
 produced by `ferret run`.
 
 ```
-python3 scripts/plot.py line     FILE.csv [--x=COL] [--xscale=log|linear] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--metric=auto|cycles|ns] [--stat=min|median] [--ymax=N] [--series=COL,...]
-python3 scripts/plot.py heatmap  FILE.csv [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
-python3 scripts/plot.py surface  FILE.csv [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz] [--elev=DEG] [--azim=DEG]
-python3 scripts/plot.py facets   FILE.csv --facet=COL [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
+python3 scripts/plot.py line     FILE.csv [--benchmark=NAME] [--x=COL] [--xscale=log|linear] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--metric=auto|cycles|ns] [--stat=min|median] [--ymax=N] [--series=COL,...]
+python3 scripts/plot.py heatmap  FILE.csv [--benchmark=NAME] [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
+python3 scripts/plot.py surface  FILE.csv [--benchmark=NAME] [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz] [--elev=DEG] [--azim=DEG]
+python3 scripts/plot.py facets   FILE.csv [--benchmark=NAME] --facet=COL [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
 ```
 
 The plot script reads row 0 of the CSV's `benchmark` column to choose

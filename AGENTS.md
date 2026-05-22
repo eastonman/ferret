@@ -19,22 +19,22 @@ mental model.
 Inside `nix develop` (or with the equivalent tools on `PATH`):
 
 ```sh
-# 1. Format C++ + Python in place.
+# format C++ + Python in place.
 ./scripts/format.sh
 
-# 2. Configure with compile_commands.json (lint.sh needs it).
+# generate compile_commands.json for lint.
 cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-# 3. Build.
+# build all targets.
 cmake --build build
 
-# 4. Run C++ tests.
+# run C++ tests.
 ctest --test-dir build --output-on-failure
 
-# 5. Run Python tests (skips the `integration` marker).
+# run Python tests (skips the `integration` marker).
 ./scripts/test_py.sh
 
-# 6. Verify everything CI verifies. This is the gate.
+# verify everything CI verifies — this is the gate.
 ./scripts/lint.sh
 ```
 
@@ -144,7 +144,7 @@ PRs target `main`. CI must be green:
 
 ## Footguns
 
-- **`lint.sh` exits 1 with no useful output if `build/compile_commands.json` is missing.** Step 2 of the TL;DR is not optional.
+- **`lint.sh` exits 1 with no useful output if `build/compile_commands.json` is missing.** The configure step is not optional.
 - **clang-tidy from non-Nix toolchains may diverge** from the version CI pins. If `./scripts/lint.sh` passes locally but the `lint.yml` job fails, suspect version skew — re-run under `nix develop`.
 - **kaleido version split.** The Nix dev shell currently ships kaleido 0.2.1 (nixpkgs-25.11); the pip path uses `>=1.0`. The two have different internal export paths. `test_integration_export.py` exercises both in CI; expect different code paths on each.
 - **`pinning` privileged operations skip silently.** `pin_to_core`, `boost_priority` (via `setpriority(-10)`), and `lock_memory` (`mlockall`) need elevated privileges. The corresponding tests skip themselves when `geteuid() != 0`. Benchmark *correctness* is unaffected, but *timing reproducibility* requires running as root or with the right capabilities.
@@ -161,7 +161,7 @@ PRs target `main`. CI must be green:
 | Global `ferret run` flags and axis syntax | [`docs/cli.md`](docs/cli.md)                        |
 | Full build options + sanitizer matrix     | [`docs/build.md`](docs/build.md)                    |
 | Per-benchmark kernel structure            | [`docs/benchmarks/`](docs/benchmarks/)              |
-| The two-step cycle workflow + caveats     | [`README.md`](README.md)                            |
+| Frequency probe, benchmark, and plot workflow + caveats | [`README.md`](README.md)                 |
 
 `superpowers/specs/` and `superpowers/plans/` are point-in-time
 artifacts. If they disagree with current code, the code is right.
