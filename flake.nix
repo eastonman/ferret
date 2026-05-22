@@ -41,11 +41,6 @@
                     numpy
                     pandas
                     plotly
-                    # INTENTIONAL DIVERGENCE: nixpkgs-25.11 ships kaleido 0.2.1 (legacy
-                    # Orca-based renderer), while requirements.txt requires kaleido>=1.0
-                    # (the new chromium-based renderer).  Both API paths are handled at
-                    # runtime by output.py, so the dev shell remains functional.
-                    # To use the v1 path locally: pip install --user 'kaleido>=1.0'
                     kaleido
                     pytest
                   ]
