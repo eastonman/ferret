@@ -101,6 +101,18 @@ def axis_ticks(labels: list[object]) -> tuple[list[int], list[str]]:
     return kept, [human_readable(labels[i]) for i in kept]
 
 
+def _validate_explicit_axis(df: pd.DataFrame, col: str, flag: str) -> None:
+    """Raise PlotError when an explicitly named axis column is absent or constant.
+
+    Checked before the "at least 2 varying columns" guard so constant columns
+    produce a targeted message rather than a confusing structural error.
+    """
+    if col not in df.columns:
+        raise PlotError(f"{flag}={col!r} is not a column in the CSV")
+    if df[col].nunique(dropna=True) <= 1:
+        raise PlotError(f"column {col!r} has only one unique value; cannot use as an axis")
+
+
 def resolve_heatmap_xy(
     df: pd.DataFrame,
     args: argparse.Namespace,
@@ -115,6 +127,11 @@ def resolve_heatmap_xy(
     that doesn't collide. `exclude` lets the facets kind hide the facet
     column so it isn't picked for X or Y.
     """
+    if args.x is not None:
+        _validate_explicit_axis(df, args.x, "--x")
+    if args.y is not None:
+        _validate_explicit_axis(df, args.y, "--y")
+
     varying = [c for c in varying_axis_columns(df) if c not in exclude]
     if len(varying) < 2:  # noqa: PLR2004
         raise PlotError(
