@@ -259,4 +259,4 @@ def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
         if resolved == "png" and _has_surface_trace(fig) and _is_kaleido_canvas_error(e):
             _write_chromium_webgl_png(fig, out, width=width, height=height)
             return
-        raise
+        raise PlotError(f"image export failed: {e}") from e

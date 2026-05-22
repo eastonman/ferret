@@ -13,6 +13,7 @@ from plotly.subplots import make_subplots
 from ferret_plot.columns import bench_name, resolve_metric
 from ferret_plot.errors import PlotError
 from ferret_plot.kinds._shared import (
+    assert_finite_metric,
     assert_logz_positive,
     axis_ticks,
     build_heatmap_trace,
@@ -56,7 +57,8 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
 
     cmap = validate_cmap(args.cmap)
 
-    metric_values = df[metric.column].to_numpy()
+    metric_values = df[metric.column].to_numpy(dtype=float)
+    assert_finite_metric(metric_values, metric.column)
     if args.logz:
         assert_logz_positive(metric_values)
         cmin = float(np.log10(np.nanmin(metric_values)))

@@ -104,7 +104,13 @@ class TestSurfaceMakeFigure:
     def test_logz_rejects_non_positive_values(self):
         df = tage_capacity_df()
         df.loc[df.index[0], "cycles_per_site_min"] = 0.0
-        with pytest.raises(PlotError, match="--logz requires positive"):
+        with pytest.raises(PlotError, match="--logz requires"):
+            surface_kind.make_figure(df, _args(logz=True))
+
+    def test_logz_rejects_negative_values(self):
+        df = tage_capacity_df()
+        df["cycles_per_site_min"] = -1.0
+        with pytest.raises(PlotError, match="--logz requires"):
             surface_kind.make_figure(df, _args(logz=True))
 
     def test_invalid_cmap_raises(self):

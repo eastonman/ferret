@@ -127,6 +127,9 @@ def main(argv: list[str] | None = None) -> int:
         fig = args.handler(df, args)
         output.emit(fig, out=args.out, fmt=args.format, html_js=args.html_js)
         return 0
+    except pd.errors.ParserError as e:
+        print(f"plot.py: malformed CSV: {e}", file=sys.stderr)
+        return EXIT_USER_ERROR
     except (PlotError, FileNotFoundError) as e:
         print(f"plot.py: {e}", file=sys.stderr)
         return EXIT_USER_ERROR

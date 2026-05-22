@@ -121,6 +121,15 @@ class TestFacetsSubcommand:
         assert out_path.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
+class TestMalformedCsv:
+    def test_malformed_csv_exits_2(self, tmp_path, capsys):
+        bad_csv = tmp_path / "bad.csv"
+        bad_csv.write_text("a,b\n1,2\n3,4,5,extra\n")
+        rc = cli.main(["line", str(bad_csv), "--out", str(tmp_path / "x.png")])
+        assert rc == EXIT_USER_ERROR
+        assert "malformed CSV" in capsys.readouterr().err
+
+
 class TestErrorPaths:
     def test_mixed_benchmark_csv_exits_2(self, tmp_path, capsys):
         mixed = pd.concat([dbf_df(), dct_df()], ignore_index=True)

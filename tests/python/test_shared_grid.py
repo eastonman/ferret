@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import pytest
 from ferret_plot.errors import PlotError
-from ferret_plot.kinds._shared import build_heatmap_trace, prepare_grid
+from ferret_plot.kinds._shared import assert_finite_metric, assert_logz_positive, build_heatmap_trace, prepare_grid
 from fixtures import dbf_df
 
 _MISSING_BRANCH = 2
@@ -59,6 +59,42 @@ class TestPrepareGrid:
                 value_col="cycles_per_site_min",
                 require_complete=True,
             )
+
+
+class TestAssertFiniteMetric:
+    def test_all_nan_raises(self):
+        values = np.array([float("nan"), float("nan")])
+        with pytest.raises(PlotError, match="no finite values"):
+            assert_finite_metric(values, "my_metric")
+
+    def test_finite_values_pass(self):
+        values = np.array([1.0, 2.0, float("nan")])
+        assert_finite_metric(values, "my_metric")  # no exception
+
+
+class TestAssertLogzPositive:
+    def test_all_nan_raises(self):
+        values = np.array([float("nan"), float("nan")])
+        with pytest.raises(PlotError, match="--logz requires at least one finite positive value"):
+            assert_logz_positive(values)
+
+    def test_non_positive_raises(self):
+        values = np.array([0.0, 1.0, 2.0])
+        with pytest.raises(PlotError, match="--logz requires"):
+            assert_logz_positive(values)
+
+    def test_negative_raises(self):
+        values = np.array([-1.0, 2.0])
+        with pytest.raises(PlotError, match="--logz requires"):
+            assert_logz_positive(values)
+
+    def test_positive_values_pass(self):
+        values = np.array([0.5, 1.0, 2.0])
+        assert_logz_positive(values)  # no exception
+
+    def test_positive_with_nan_passes(self):
+        values = np.array([1.0, float("nan"), 2.0])
+        assert_logz_positive(values)  # no exception
 
 
 class TestBuildHeatmapTrace:
