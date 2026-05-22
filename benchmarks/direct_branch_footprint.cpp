@@ -2,6 +2,19 @@ extern "C" {
 #include <sljitLir.h>
 }
 
+// SLJIT_UPDATE_WX_FLAGS is defined inside sljitLir.c (the allocator
+// implementation) and is not part of the public sljitLir.h API. On all
+// x86_64 targets (Linux W+X mapping, macOS x86_64 no-MAP_JIT) the macro
+// expands to nothing; define a compatible no-op here for non-MAP_JIT
+// platforms so the call sites compile regardless of which sljit allocator
+// was compiled in.
+#if defined(__x86_64__) || defined(_M_X64)
+#ifndef SLJIT_UPDATE_WX_FLAGS
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define SLJIT_UPDATE_WX_FLAGS(from, to, enable_exec) ((void)(from), (void)(to), (void)(enable_exec))
+#endif
+#endif
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -200,7 +213,9 @@ struct DirectBranchFootprint : Benchmark {
       // the cast is intrinsic to patching executable memory.
       // NOLINTNEXTLINE(performance-no-int-to-ptr)
       auto* writable = reinterpret_cast<uint8_t*>(jump_addr - static_cast<sljit_uw>(exec_offset) + 1);
+      SLJIT_UPDATE_WX_FLAGS(writable, writable + sizeof(disp), 0);
       std::memcpy(writable, &disp, sizeof(disp));
+      SLJIT_UPDATE_WX_FLAGS(writable, writable + sizeof(disp), 1);
     }
 #else
     (void)c;
