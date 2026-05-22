@@ -2,12 +2,21 @@
 
 from __future__ import annotations
 
+import argparse
+
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import pytest
 from ferret_plot.errors import PlotError
-from ferret_plot.kinds._shared import assert_finite_metric, assert_logz_positive, build_heatmap_trace, prepare_grid
+from ferret_plot.kinds._shared import (
+    assert_finite_metric,
+    assert_logz_positive,
+    build_heatmap_trace,
+    prepare_grid,
+    resolve_heatmap_xy,
+)
+from ferret_plot.registry import BenchmarkDefaults
 from fixtures import dbf_df
 
 _MISSING_BRANCH = 2
@@ -151,3 +160,27 @@ class TestBuildHeatmapTrace:
         )
         assert trace.zmin == 0.5
         assert trace.zmax == 2.5
+
+
+class TestResolveHeatmapXYConstantColumn:
+    """Explicit --x or --y columns with a single unique value must be rejected."""
+
+    def _args(self, *, x: str | None = None, y: str | None = None) -> argparse.Namespace:
+        return argparse.Namespace(x=x, y=y)
+
+    def _no_hints(self) -> BenchmarkDefaults:
+        return BenchmarkDefaults()
+
+    def test_constant_x_raises_plot_error(self):
+        # 'branches' has only one unique value; 'spacing_bytes' varies.
+        df = dbf_df(branches=(4,), spacing=(16, 32, 64))
+        args = self._args(x="branches", y=None)
+        with pytest.raises(PlotError, match="only one unique value"):
+            resolve_heatmap_xy(df, args, self._no_hints())
+
+    def test_constant_y_raises_plot_error(self):
+        # 'spacing_bytes' has only one unique value; 'branches' varies.
+        df = dbf_df(branches=(1, 2, 4), spacing=(32,))
+        args = self._args(x=None, y="spacing_bytes")
+        with pytest.raises(PlotError, match="only one unique value"):
+            resolve_heatmap_xy(df, args, self._no_hints())
