@@ -1,5 +1,5 @@
 # Runtime deps for scripts/ — Nix users: see flake.nix.
 numpy
 pandas
-plotly>=6.1.1
+plotly
 kaleido>=1.0

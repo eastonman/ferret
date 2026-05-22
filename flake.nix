@@ -41,7 +41,7 @@
                     numpy
                     pandas
                     plotly
-                    kaleido # nixpkgs-25.11 ships 0.2.1; run `pip install --user 'kaleido>=1.0'` for v1
+                    kaleido
                     pytest
                   ]
               ))
