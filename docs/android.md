@@ -11,23 +11,12 @@ as a Snapdragon 888 device.
 
 ## Prerequisites
 
-Install these on the host:
-
-- Android NDK.
-- Android SDK platform-tools, providing `adb`.
-- CMake and Ninja.
-- Python dependencies from `requirements.txt` and `requirements-dev.txt`
-  if you plan to run host-side plotting or Python tests.
-
-Set `ANDROID_NDK_HOME` to the NDK directory:
+Enter the Android dev shell. It pulls in the NDK, platform-tools (`adb`),
+CMake, and Ninja, and sets `ANDROID_NDK_HOME` for you:
 
 ```sh
-export ANDROID_NDK_HOME="$HOME/Library/Android/sdk/ndk/26.3.11579264"
-test -f "$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
+NIXPKGS_ALLOW_UNFREE=1 nix develop --impure .#android
 ```
-
-The second command must exit zero. If it does not, adjust
-`ANDROID_NDK_HOME` to the NDK version installed on your machine.
 
 `adb` must see an authorized device:
 
@@ -140,8 +129,9 @@ the operator's responsibility.
   that platform-tools are on `PATH`.
 - `adb devices` prints `unauthorized`: unlock the phone and accept the
   USB debugging prompt.
-- CMake cannot find the Android toolchain: set `ANDROID_NDK_HOME` to a
-  directory containing `build/cmake/android.toolchain.cmake`.
+- CMake cannot find the Android toolchain: enter the `.#android` dev
+  shell so `ANDROID_NDK_HOME` is set, or point it at a directory
+  containing `build/cmake/android.toolchain.cmake`.
 - CMake finds host libraries while cross-compiling: use a clean
   `build-android-arm64/` directory and keep Android builds separate from
   host builds.
