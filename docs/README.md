@@ -4,11 +4,12 @@
 
 These docs reflect current behavior. Edit them when behavior changes.
 
+- [`../AGENTS.md`](../AGENTS.md) — operational checklist for contributors and agentic workers (pre-PR commands, conventions, CI gates, footguns).
 - [`architecture.md`](architecture.md) — codebase overview and module map.
-- [`build.md`](build.md) — dependency requirements, Nix/CMake recipes, sanitizer matrix.
+- [`build.md`](build.md) — dependency requirements, Nix/CMake recipes, sanitizer matrix, single-test recipes.
 - [`cli.md`](cli.md) — global `ferret run` flags and axis syntax.
 - [`writing-a-benchmark.md`](writing-a-benchmark.md) — guide for adding a new benchmark.
-- [`contributing.md`](contributing.md) — formatting and linting.
+- [`contributing.md`](contributing.md) — formatters and linters (points to AGENTS.md).
 - [`../README.md`](../README.md) — user-facing pitch, quickstart, two-step cycle workflow, discipline.
 
 ### Benchmarks
@@ -18,6 +19,7 @@ One page per benchmark, with kernel-structure ASCII, CLI surface, and reading-th
 - [`benchmarks/dependent_chain_throughput.md`](benchmarks/dependent_chain_throughput.md) — frequency-probe baseline.
 - [`benchmarks/direct_branch_footprint.md`](benchmarks/direct_branch_footprint.md) — direct-jump BTB capacity.
 - [`benchmarks/nested_call_depth.md`](benchmarks/nested_call_depth.md) — RAS depth.
+- [`benchmarks/branch_history_footprint.md`](benchmarks/branch_history_footprint.md) — conditional-branch direction-predictor capacity.
 
 ## Historical artifacts
 

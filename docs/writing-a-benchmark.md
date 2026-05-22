@@ -1,8 +1,9 @@
 # Writing a Benchmark
 
 A new Ferret benchmark is one C++ file under `benchmarks/`. It
-subclasses `ferret::Benchmark`, overrides six pure virtuals, and
-registers itself at file scope. The runner does the rest.
+subclasses `ferret::Benchmark`, overrides six pure virtuals (plus an
+optional `verify_layout` hook), and registers itself at file scope.
+The runner does the rest.
 
 ## The vtable
 
@@ -33,6 +34,13 @@ registers itself at file scope. The runner does the rest.
   `throw std::invalid_argument` *before* touching `c` so the compiler
   state stays clean. Any sljit error set on `c` propagates to
   `JittedKernel::ok() == false`.
+- **`verify_layout(c)`** *(optional, defaults to no-op)* — called once
+  per row after `sljit_generate_code` while the compiler is still
+  alive. Label addresses are only valid in that window, and post-
+  generate patches need `sljit_get_executable_offset(c)` to find the
+  writable mapping. Override to assert layout invariants (e.g., that
+  branch sites landed at the expected spacing). Throw on mismatch;
+  the runner records the row as a JIT failure.
 
 ## Registration
 
@@ -43,17 +51,49 @@ FERRET_BENCHMARK("my_bench", MyBench);
 ```
 
 The macro registers a factory at static-init time, so `ferret list`
-sees the new name automatically. Add the new file to the executable's
-source list in the top-level `CMakeLists.txt`:
+sees the new name automatically. Add the new file to the
+`ferret_benchmarks` OBJECT library in the top-level `CMakeLists.txt`
+— that library is reused by the `ferret` executable and by benchmark-
+specific tests:
 
 ```cmake
-add_executable(ferret
-  src/main.cpp
-  benchmarks/dependent_chain_throughput.cpp
+add_library(ferret_benchmarks OBJECT
+  benchmarks/branch_history_footprint.cpp
   benchmarks/direct_branch_footprint.cpp
+  benchmarks/nested_call_depth.cpp
+  benchmarks/dependent_chain_throughput.cpp
   benchmarks/my_bench.cpp        # <-- new
 )
 ```
+
+## Shared helpers — `bench_helpers.hpp`
+
+`include/ferret/bench_helpers.hpp` provides three JIT-time utilities
+that the existing benchmarks all use. The header pulls in the full
+`sljitLir.h`, so include it only from benchmark TUs and other JIT-only
+sources, not from public headers.
+
+- **`emit_outer_loop(c, counter_reg, iters, emit_body)`** — emits the
+  canonical scaffold (`MOV counter, iters` → loop label → body →
+  `SUB|SET_Z counter, 1` → `JNZ`). `counter_reg` must be a scratch
+  register the body neither reads nor writes. Prefer this over hand-
+  rolling a counter loop in `emit_kernel` so the runner-visible loop
+  shape stays consistent across benchmarks.
+- **`compute_iterations(target_ops, sites_per_kernel)`** — returns
+  `max(1, target_ops / sites_per_kernel)`. Use it from `iterations()`
+  to pick an outer-loop count that amortizes the tick-read overhead to
+  roughly `target_ops` ops per repetition.
+- **`verify_uniform_spacing(labels, spacing, strict, context)`** — call
+  from `verify_layout` to assert each label sits at `i * spacing` off
+  `labels[0]`. `strict=true` requires equality (used by
+  `direct_branch_footprint`); `strict=false` requires `>=` (sljit may
+  pick a longer encoding, so spacing is a floor —
+  `branch_history_footprint` uses this mode). Throws
+  `std::runtime_error` with the per-site delta on the first mismatch.
+
+The "frequency-probe pattern" example below sets `iterations=1` and so
+does not need `emit_outer_loop`; the "parameter-sweep pattern" example
+and the other benchmarks in `benchmarks/` use all three helpers.
 
 ## Worked example A — frequency-probe pattern
 
