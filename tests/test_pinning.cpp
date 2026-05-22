@@ -6,9 +6,7 @@
 
 using namespace ferret;
 
-TEST(Pinning, PinToExistingCoreSucceeds) {
-  EXPECT_TRUE(pinning::pin_to_core(0));
-}
+TEST(Pinning, PinToExistingCoreSucceeds) { EXPECT_TRUE(pinning::pin_to_core(0)); }
 
 TEST(Pinning, BoostPriorityRequiresPrivilege) {
   if (geteuid() != 0) {
