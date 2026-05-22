@@ -86,7 +86,8 @@ TEST(BenchHelpers, VerifyUniformSpacingPassesOnExactSpacing) {
     labels.push_back(sljit_emit_label(ch.c));
   }
   sljit_emit_return_void(ch.c);
-  ASSERT_NE(sljit_generate_code(ch.c, 0, nullptr), nullptr);
+  void* code = sljit_generate_code(ch.c, 0, nullptr);
+  ASSERT_NE(code, nullptr);
 
   // After generate_code, every label has a real address. We cannot assert
   // the exact spacing because emit_outer_loop's size is non-zero and
@@ -95,6 +96,8 @@ TEST(BenchHelpers, VerifyUniformSpacingPassesOnExactSpacing) {
   size_t base = sljit_get_label_addr(labels[0]);
   size_t step = sljit_get_label_addr(labels[1]) - base;
   EXPECT_NO_THROW(ferret::verify_uniform_spacing(labels, step, /*strict=*/true));
+
+  sljit_free_code(code, nullptr);
 }
 
 TEST(BenchHelpers, VerifyUniformSpacingNoOpsOnEmpty) {
