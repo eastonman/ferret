@@ -29,7 +29,7 @@ ctest --test-dir build --output-on-failure
 
 Full build options, sanitizer matrix, and non-Nix recipes: [`docs/build.md`](docs/build.md).
 
-## The two-step cycle workflow
+## Frequency probe, benchmark, and plot workflow
 
 Ferret reports per-site cost in **CPU cycles** when you supply the
 running core frequency, in **nanoseconds** otherwise. Cycles are the
@@ -38,17 +38,17 @@ about the structure under test. Ferret never auto-probes the
 frequency — it asks you to do it explicitly.
 
 ```sh
-# Step 1: probe the running frequency on core 3.
+# probe core frequency on core 3.
 build/ferret run dependent_chain_throughput --core=3 --out=/tmp/freq.csv
 python3 scripts/freq.py /tmp/freq.csv
 # → estimated_freq=4.521GHz
 
-# Step 2: run the actual benchmark with --freq, pinned to the same core.
+# run benchmark with --freq, pinned to the same core, writing results to CSV.
 build/ferret run direct_branch_footprint --core=3 \
     --branches=1..32768 --spacing_bytes=16..128 \
     --freq=4.521GHz --out=/tmp/btb.csv
 
-# Step 3: line plot. Default --out=*.png writes a static image
+# render line plot; default --out=*.png writes a static image
 # (requires Chrome for kaleido; the Nix dev shell provides it on Linux).
 python3 scripts/plot.py line /tmp/btb.csv --out=/tmp/btb.png
 
