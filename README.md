@@ -11,10 +11,10 @@ resulting curves so you can spot capacity/associativity cliffs.
 
 ## Supported platforms
 
-| Arch    | Linux | macOS | Android |
-| ------- | :---: | :---: | :-----: |
-| x86_64  |   ✓   |   —   |    ✓    |
-| AArch64 |   ✓   |   ✓   |    ✓    |
+| Arch    |    Linux     | macOS |   Android    |
+| ------- | :----------: | :---: | :----------: |
+| x86_64  |      ✓       |   —   | (not tested) |
+| AArch64 | (not tested) |   ✓   |      ✓       |
 
 RISC-V and LoongArch are reachable through sljit but not yet supported.
 
@@ -74,12 +74,12 @@ CLI flags and axis syntax: [`docs/cli.md`](docs/cli.md).
 
 ## Benchmarks
 
-| Name                                                                             | Targets                                  |
-| -------------------------------------------------------------------------------- | ---------------------------------------- |
-| [`dependent_chain_throughput`](docs/benchmarks/dependent_chain_throughput.md)    | running core frequency / 1-IPC baseline  |
-| [`direct_branch_footprint`](docs/benchmarks/direct_branch_footprint.md)          | direct-jump BTB capacity                 |
-| [`nested_call_depth`](docs/benchmarks/nested_call_depth.md)                      | Return Address Stack (RAS) depth         |
-| [`branch_history_footprint`](docs/benchmarks/branch_history_footprint.md)        | conditional-branch direction-predictor capacity |
+| Name                                                                          | Targets                                         |
+| ----------------------------------------------------------------------------- | ----------------------------------------------- |
+| [`dependent_chain_throughput`](docs/benchmarks/dependent_chain_throughput.md) | running core frequency / 1-IPC baseline         |
+| [`direct_branch_footprint`](docs/benchmarks/direct_branch_footprint.md)       | direct-jump BTB capacity                        |
+| [`nested_call_depth`](docs/benchmarks/nested_call_depth.md)                   | Return Address Stack (RAS) depth                |
+| [`branch_history_footprint`](docs/benchmarks/branch_history_footprint.md)     | conditional-branch direction-predictor capacity |
 
 Each benchmark page has the kernel structure, CLI surface, and reading-the-curves guide.
 
