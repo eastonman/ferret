@@ -13,9 +13,8 @@ import pytest
 _SCRIPTS = Path(__file__).resolve().parent.parent.parent / "scripts"
 sys.path.insert(0, str(_SCRIPTS))
 
-from ferret_plot import cli as _cli
-from ferret_plot import output
-
+from ferret_plot import cli as _cli  # noqa: E402  # sys.path setup must precede
+from ferret_plot import output  # noqa: E402  # sys.path setup must precede
 
 # Destinations shared by every subparser — worth declaring explicitly so
 # tests can override them without knowing a subcommand's specific flags.
@@ -37,13 +36,11 @@ def _introspect_kind_defaults() -> dict[str, dict[str, object]]:
     skipping the destinations already covered by _COMMON_DEFAULTS and the
     internal `handler` default injected by set_defaults.
     """
-    import argparse as _ap
-
     skip = set(_COMMON_DEFAULTS) | {"handler", "kind"}
     result: dict[str, dict[str, object]] = {}
     parser = _cli.build_parser()
     for action in parser._actions:
-        if not isinstance(action, _ap._SubParsersAction):
+        if not isinstance(action, argparse._SubParsersAction):
             continue
         for name, subparser in action.choices.items():
             defaults: dict[str, object] = {}

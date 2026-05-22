@@ -85,7 +85,7 @@ def _compute_aspect_ratio(grid: pd.DataFrame) -> dict:
     )
 
 
-def _build_surface_trace(
+def _build_surface_trace(  # noqa: PLR0913
     grid: pd.DataFrame,
     *,
     z: np.ndarray,
@@ -167,7 +167,7 @@ def _build_surface_trace(
     )
 
 
-def _build_scene_layout(
+def _build_scene_layout(  # noqa: PLR0913
     grid: pd.DataFrame,
     *,
     xcol: str,
