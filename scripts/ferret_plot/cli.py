@@ -23,21 +23,25 @@ EXIT_USER_ERROR = 2
 
 def _line_handler(df, args):
     from ferret_plot.kinds.line import make_figure
+
     return make_figure(df, args)
 
 
 def _heatmap_handler(df, args):
     from ferret_plot.kinds.heatmap import make_figure
+
     return make_figure(df, args)
 
 
 def _surface_handler(df, args):
     from ferret_plot.kinds.surface import make_figure
+
     return make_figure(df, args)
 
 
 def _facets_handler(df, args):
     from ferret_plot.kinds.facets import make_figure
+
     return make_figure(df, args)
 
 
@@ -87,7 +91,9 @@ def build_parser() -> argparse.ArgumentParser:
     heat.add_argument("--x", default=None, help="X-axis column")
     heat.add_argument("--y", default=None, help="Y-axis column")
     heat.add_argument("--logz", action="store_true", help="log color scale")
-    heat.add_argument("--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast)")
+    heat.add_argument(
+        "--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast)"
+    )
     heat.set_defaults(handler=_heatmap_handler)
 
     surface = sub.add_parser("surface", help="3D surface over two varying axes")
@@ -97,7 +103,9 @@ def build_parser() -> argparse.ArgumentParser:
     surface.add_argument("--logz", action="store_true", help="log color scale")
     surface.add_argument("--elev", type=float, default=20.0, help="3D camera elevation angle")
     surface.add_argument("--azim", type=float, default=-2.0, help="3D camera azimuth angle")
-    surface.add_argument("--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast perceptual)")
+    surface.add_argument(
+        "--cmap", default=_DEFAULT_CMAP, help=f"colorscale name (default: {_DEFAULT_CMAP}, high-contrast perceptual)"
+    )
     surface.set_defaults(handler=_surface_handler)
 
     fac = sub.add_parser("facets", help="grid of heatmaps over >=3 varying axes")

@@ -258,9 +258,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     # array as text[x_idx][y_idx] — the OPPOSITE of the (y, x) order
     # it uses for z.  transpose=True builds shape (n_cols, n_rows)
     # where the outer axis maps to surface.x and the inner to surface.y.
-    hover_text = hover_text_grid(
-        grid, xcol=xcol, ycol=ycol, value_label=metric.label, z=z, transpose=True
-    )
+    hover_text = hover_text_grid(grid, xcol=xcol, ycol=ycol, value_label=metric.label, z=z, transpose=True)
 
     surface = _build_surface_trace(
         grid,
