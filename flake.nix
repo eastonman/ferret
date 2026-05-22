@@ -51,6 +51,26 @@
             ];
         };
 
+        devShells.android = let
+          pkgsUnfree = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          androidNdk = pkgsUnfree.androidenv.androidPkgs.ndk-bundle;
+          platformTools = pkgsUnfree.androidenv.androidPkgs.platform-tools;
+        in
+          pkgs.mkShell {
+            packages = [
+              pkgs.cmake
+              pkgs.ninja
+              androidNdk
+              platformTools
+            ];
+            shellHook = ''
+              export ANDROID_NDK_HOME=${androidNdk}/libexec/android-sdk/ndk/${androidNdk.version}
+            '';
+          };
+
         packages.default = pkgs.callPackage ./nix/ferret.nix {
           inherit sljit;
           src = self;
