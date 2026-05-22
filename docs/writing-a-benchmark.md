@@ -1,8 +1,8 @@
 # Writing a Benchmark
 
 A new Ferret benchmark is one C++ file under `benchmarks/`. It
-subclasses `ferret::Benchmark`, overrides six pure virtuals (plus an
-optional `verify_layout` hook), and registers itself at file scope.
+subclasses `ferret::Benchmark`, overrides five pure virtuals (plus two
+optional virtual hooks), and registers itself at file scope.
 The runner does the rest.
 
 ## The vtable
@@ -20,9 +20,10 @@ The runner does the rest.
   `geom_range` is `log2_range` when `samples_per_octave == 1`; pick
   a larger `k` when the capacity cliff under test sits between two
   adjacent powers of two and you want denser default sampling.
-- **`options()`** — returns scalar non-swept knobs. Each appears as a
-  `--<name>=<v>` CLI flag and is recorded in the CSV one column after
-  the axes. Default to `{}` if your benchmark has no per-bench options.
+- **`options()`** *(optional, defaults to `{}`)* — returns scalar
+  non-swept knobs. Each appears as a `--<name>=<v>` CLI flag and is
+  recorded in the CSV one column after the axes. Override only when
+  your benchmark exposes per-bench options.
 - **`sites_per_kernel(p)`** — divisor the runner uses to convert
   `ticks` into per-site latency. Must be > 0; the runner rejects zero
   with exit code 2.
