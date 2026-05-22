@@ -13,6 +13,12 @@ mapfile -t CXX_FORMAT_FILES < <(
     -type f
 )
 
+if [ ! -f build/compile_commands.json ]; then
+  echo "lint.sh: build/compile_commands.json missing." >&2
+  echo "        Run: cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" >&2
+  exit 1
+fi
+
 # Lint exactly the .cpp files CMake compiled this build (per-platform
 # source selection in CMakeLists.txt excludes wrong-arch / wrong-OS files
 # from build/compile_commands.json; lint should follow the same set).
@@ -31,12 +37,6 @@ ruff format --check scripts/ tests/python/
 
 echo "==> ruff check"
 ruff check scripts/ tests/python/
-
-if [ ! -f build/compile_commands.json ]; then
-  echo "lint.sh: build/compile_commands.json missing." >&2
-  echo "        Run: cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON" >&2
-  exit 1
-fi
 
 echo "==> clang-tidy"
 # clang-tidy from nixpkgs is unwrapped, so the C++ stdlib search paths

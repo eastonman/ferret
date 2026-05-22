@@ -114,6 +114,7 @@ target_link_libraries(test_nested_call_depth PRIVATE
   ferret_benchmarks
   sljit::sljit
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_nested_call_depth)
 
@@ -126,6 +127,7 @@ target_link_libraries(test_branch_history_footprint PRIVATE
   ferret_benchmarks
   sljit::sljit
   GTest::gtest GTest::gtest_main
+  ferret_warnings
 )
 gtest_discover_tests(test_branch_history_footprint)
 
