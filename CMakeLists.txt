@@ -153,12 +153,14 @@ else()
 endif()
 
 set(ferret_arch_timing_src "")
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
   set(ferret_arch_timing_src src/timing/x86_64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
   set(ferret_arch_timing_src src/timing/aarch64.cpp)
 else()
-  message(FATAL_ERROR "ferret: unsupported CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}' "
+  message(FATAL_ERROR "ferret: unsupported target arch "
+                      "CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}', "
+                      "CMAKE_ANDROID_ARCH_ABI='${CMAKE_ANDROID_ARCH_ABI}' "
                       "(supported: x86_64, aarch64)")
 endif()
 
@@ -173,9 +175,9 @@ else()
 endif()
 
 set(ferret_arch_padding_src "")
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
   set(ferret_arch_padding_src src/padding/x86_64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
   set(ferret_arch_padding_src src/padding/aarch64.cpp)
 endif()
 
@@ -231,6 +233,10 @@ target_link_libraries(ferret PRIVATE
 )
 
 install(TARGETS ferret RUNTIME DESTINATION bin)
+
+if(CMAKE_CROSSCOMPILING)
+  set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
+endif()
 
 enable_testing()
 include(GoogleTest)
