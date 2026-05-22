@@ -58,7 +58,10 @@ JittedKernel::~JittedKernel() {
   }
 }
 
-JittedKernel::JittedKernel(JittedKernel&& other) noexcept : code_(other.code_) { other.code_ = nullptr; }
+JittedKernel::JittedKernel(JittedKernel&& other) noexcept : code_(other.code_), code_size_(other.code_size_) {
+  other.code_ = nullptr;
+  other.code_size_ = 0;
+}
 
 JittedKernel& JittedKernel::operator=(JittedKernel&& other) noexcept {
   if (this != &other) {
@@ -66,7 +69,9 @@ JittedKernel& JittedKernel::operator=(JittedKernel&& other) noexcept {
       sljit_free_code(code_, nullptr);
     }
     code_ = other.code_;
+    code_size_ = other.code_size_;
     other.code_ = nullptr;
+    other.code_size_ = 0;
   }
   return *this;
 }

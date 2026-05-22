@@ -88,6 +88,12 @@ struct BranchHistoryFootprint : Benchmark {
   size_t last_branches_ = 0;
   size_t last_spacing_ = 0;
 
+  ~BranchHistoryFootprint() override {
+    if (branch_history_footprint_internal::g_last_emitted == this) {
+      branch_history_footprint_internal::g_last_emitted = nullptr;
+    }
+  }
+
   [[nodiscard]] std::string name() const override { return "branch_history_footprint"; }
 
   [[nodiscard]] SweepAxes axes() const override {
