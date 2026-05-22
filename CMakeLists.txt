@@ -13,6 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # turn it OFF (-DFERRET_WERROR=OFF) for a one-off local build.
 option(FERRET_WERROR "Treat warnings as errors for ferret targets" ON)
 
+set(_ferret_use_system_deps ON)
+if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+  set(_ferret_use_system_deps OFF)
+endif()
+
 add_library(ferret_warnings INTERFACE)
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
   target_compile_options(ferret_warnings INTERFACE
@@ -60,7 +65,9 @@ if(FERRET_SANITIZER)
 endif()
 
 # --- GoogleTest: find_package first, FetchContent fallback ---
-find_package(GTest QUIET)
+if(_ferret_use_system_deps)
+  find_package(GTest QUIET)
+endif()
 if(NOT GTest_FOUND)
   include(FetchContent)
   FetchContent_Declare(googletest
@@ -78,7 +85,9 @@ if(NOT GTest_FOUND)
 endif()
 
 # --- CLI11: find_package first, FetchContent fallback ---
-find_package(CLI11 QUIET)
+if(_ferret_use_system_deps)
+  find_package(CLI11 QUIET)
+endif()
 if(NOT CLI11_FOUND)
   include(FetchContent)
   FetchContent_Declare(CLI11
@@ -89,7 +98,9 @@ if(NOT CLI11_FOUND)
 endif()
 
 # --- spdlog: find_package first, FetchContent fallback ---
-find_package(spdlog QUIET)
+if(_ferret_use_system_deps)
+  find_package(spdlog QUIET)
+endif()
 if(NOT spdlog_FOUND)
   include(FetchContent)
   FetchContent_Declare(spdlog
@@ -102,8 +113,10 @@ endif()
 # --- sljit: find headers + library on the system path first, fall back
 # to FetchContent of upstream. The Nix derivation installs into
 # $out/include/sljit/sljitLir.h and $out/lib/libsljit.a.
-find_path(SLJIT_INCLUDE_DIR sljitLir.h PATH_SUFFIXES sljit)
-find_library(SLJIT_LIBRARY sljit)
+if(_ferret_use_system_deps)
+  find_path(SLJIT_INCLUDE_DIR sljitLir.h PATH_SUFFIXES sljit)
+  find_library(SLJIT_LIBRARY sljit)
+endif()
 if(SLJIT_INCLUDE_DIR AND SLJIT_LIBRARY)
   add_library(sljit::sljit UNKNOWN IMPORTED)
   set_target_properties(sljit::sljit PROPERTIES
