@@ -152,17 +152,18 @@ else()
   add_library(sljit::sljit ALIAS sljit_static)
 endif()
 
-set(ferret_arch_timing_src "")
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
-  set(ferret_arch_timing_src src/timing/x86_64.cpp)
+  set(ferret_target_arch x86_64)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
-  set(ferret_arch_timing_src src/timing/aarch64.cpp)
+  set(ferret_target_arch aarch64)
 else()
   message(FATAL_ERROR "ferret: unsupported target arch "
                       "CMAKE_SYSTEM_PROCESSOR='${CMAKE_SYSTEM_PROCESSOR}', "
                       "CMAKE_ANDROID_ARCH_ABI='${CMAKE_ANDROID_ARCH_ABI}' "
                       "(supported: x86_64, aarch64)")
 endif()
+set(ferret_arch_timing_src src/timing/${ferret_target_arch}.cpp)
+set(ferret_arch_padding_src src/padding/${ferret_target_arch}.cpp)
 
 set(ferret_os_pinning_src "")
 if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
@@ -172,13 +173,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 else()
   message(FATAL_ERROR "ferret: unsupported CMAKE_SYSTEM_NAME='${CMAKE_SYSTEM_NAME}' "
                       "(supported: Linux, Android, Darwin)")
-endif()
-
-set(ferret_arch_padding_src "")
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64|AMD64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
-  set(ferret_arch_padding_src src/padding/x86_64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)" OR CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
-  set(ferret_arch_padding_src src/padding/aarch64.cpp)
 endif()
 
 add_library(ferret_core STATIC
