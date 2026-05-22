@@ -24,7 +24,7 @@ def assert_logz_positive(values: np.ndarray, *, metric_label: str | None = None)
         raise PlotError("--logz requires positive metric values")
 
 
-def hover_text_grid(
+def hover_text_grid(  # noqa: PLR0913
     grid: pd.DataFrame,
     *,
     xcol: str,

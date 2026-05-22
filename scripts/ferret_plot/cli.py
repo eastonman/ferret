@@ -22,25 +22,25 @@ EXIT_USER_ERROR = 2
 
 
 def _line_handler(df, args):
-    from ferret_plot.kinds.line import make_figure
+    from ferret_plot.kinds.line import make_figure  # noqa: PLC0415  # lazy so --help skips plotly import
 
     return make_figure(df, args)
 
 
 def _heatmap_handler(df, args):
-    from ferret_plot.kinds.heatmap import make_figure
+    from ferret_plot.kinds.heatmap import make_figure  # noqa: PLC0415  # lazy so --help skips plotly import
 
     return make_figure(df, args)
 
 
 def _surface_handler(df, args):
-    from ferret_plot.kinds.surface import make_figure
+    from ferret_plot.kinds.surface import make_figure  # noqa: PLC0415  # lazy so --help skips plotly import
 
     return make_figure(df, args)
 
 
 def _facets_handler(df, args):
-    from ferret_plot.kinds.facets import make_figure
+    from ferret_plot.kinds.facets import make_figure  # noqa: PLC0415  # lazy so --help skips plotly import
 
     return make_figure(df, args)
 

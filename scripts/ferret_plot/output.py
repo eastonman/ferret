@@ -16,6 +16,7 @@ so users don't see kaleido's internal traceback. Result is cached.
 from __future__ import annotations
 
 import atexit
+import contextlib
 import os
 import shutil
 import subprocess
@@ -232,10 +233,8 @@ def emit(fig: Any, *, out: str | None, fmt: str | None, html_js: str) -> None:
                 out_path = tmp.name
 
             def _unlink_temp(path: str) -> None:
-                try:
+                with contextlib.suppress(OSError):
                     os.unlink(path)
-                except OSError:
-                    pass
 
             atexit.register(_unlink_temp, out_path)
         else:
