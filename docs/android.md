@@ -147,9 +147,9 @@ done'
 `0xd82 = Cortex-X4`). For reference, two SoCs the runbook has been used
 on:
 
-| SoC | CPU 0–N | Cluster mapping |
-|---|---|---|
-| Snapdragon 888 (lahaina) | 0–3 / 4–6 / 7 | Cortex-A55 / Cortex-A78 / Cortex-X1 (prime) |
+| SoC                                     | CPU 0–N             | Cluster mapping                                                           |
+| --------------------------------------- | ------------------- | ------------------------------------------------------------------------- |
+| Snapdragon 888 (lahaina)                | 0–3 / 4–6 / 7       | Cortex-A55 / Cortex-A78 / Cortex-X1 (prime)                               |
 | Snapdragon 8 Gen 3 (pineapple / SM8650) | 0–1 / 2–4 / 5–6 / 7 | Cortex-A520 / Cortex-A720 (fast) / Cortex-A720 (slow) / Cortex-X4 (prime) |
 
 On both, `--core=7` selects the prime core and `--core=0` selects the

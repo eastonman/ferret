@@ -14,7 +14,7 @@ per-site cost steps up.
 
 ## Kernel structure
 
-```
+```text
    PC                  site (>= spacing_bytes apart)
  0x0000   ┌──────────────────────────────────────┐
           │  MOV  r2, [row_ptr + 0]              │  load 32-bit pattern
@@ -44,7 +44,7 @@ Annotated:
   access adjacent words in memory; one L1 line covers 16 sites.
 - Sites are emitted via sljit's high-level ops (load, cmp, conditional
   jump to the immediately-following label) and padded with NOPs so
-  each site occupies *at least* `spacing_bytes`. The actual stride may
+  each site occupies _at least_ `spacing_bytes`. The actual stride may
   be a few bytes larger when sljit picks longer encodings — `spacing`
   is a minimum, not an exact value. Its job is to spread sites across
   enough BTB sets to avoid conflict aliasing dominating the curve.
@@ -55,23 +55,23 @@ Annotated:
 
 ## Per-benchmark options
 
-| flag                  | meaning                                                  |
-| --------------------- | -------------------------------------------------------- |
-| `--pattern=0`         | All-zero fill — all-not-taken trivial baseline.          |
-| `--pattern=1` (def.)  | Per-entry random `{0,1}` seeded by `--seed`.             |
-| `--spacing_bytes=16`  | Minimum PC stride per site. Min 8 (AArch64) / 6 (x86_64). |
+| flag                 | meaning                                                   |
+| -------------------- | --------------------------------------------------------- |
+| `--pattern=0`        | All-zero fill — all-not-taken trivial baseline.           |
+| `--pattern=1` (def.) | Per-entry random `{0,1}` seeded by `--seed`.              |
+| `--spacing_bytes=16` | Minimum PC stride per site. Min 8 (AArch64) / 6 (x86_64). |
 
 ## CLI surface
 
-| flag                       | meaning                                                                |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `--branches=A..B`          | Geometric sweep, default `k=1`, e.g. `1..512`.                         |
-| `--branches=A..B@k`        | Geometric sweep with `k` samples per octave.                           |
-| `--branches=v1,v2,…`       | Explicit list.                                                         |
-| `--history_len=A..B[@k]`   | Same syntax as `--branches`. Default `4..4096`.                        |
-| `--pattern=0\|1`           | See above. Default `1`.                                                |
-| `--spacing_bytes=N`        | Minimum per-site PC stride. Default 16.                                |
-| `--seed=…`                 | Seeds the per-branch random fill.                                      |
+| flag                     | meaning                                         |
+| ------------------------ | ----------------------------------------------- |
+| `--branches=A..B`        | Geometric sweep, default `k=1`, e.g. `1..512`.  |
+| `--branches=A..B@k`      | Geometric sweep with `k` samples per octave.    |
+| `--branches=v1,v2,…`     | Explicit list.                                  |
+| `--history_len=A..B[@k]` | Same syntax as `--branches`. Default `4..4096`. |
+| `--pattern=0\|1`         | See above. Default `1`.                         |
+| `--spacing_bytes=N`      | Minimum per-site PC stride. Default 16.         |
+| `--seed=…`               | Seeds the per-branch random fill.               |
 
 See [`../cli.md`](../cli.md) for global flags.
 
@@ -109,7 +109,7 @@ predictor-driven, not kernel-driven.
   mispredict cost also includes target-redirect latency; this
   benchmark deliberately doesn't measure that.
 - **Apple Silicon pinning.** See the project README's discipline
-  section — probe and benchmark land on *some* P-core, not
+  section — probe and benchmark land on _some_ P-core, not
   necessarily the same one.
 
 ## Related docs

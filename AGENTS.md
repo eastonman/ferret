@@ -19,7 +19,7 @@ mental model.
 Inside `nix develop` (or with the equivalent tools on `PATH`):
 
 ```sh
-# format C++ + Python in place.
+# format C++ + Python + CMake + Markdown in place.
 ./scripts/format.sh
 
 # generate compile_commands.json for lint.
@@ -106,7 +106,7 @@ optional; subject is lowercase, imperative, no trailing period.
 Types in use: `feat`, `fix`, `refactor`, `style`, `perf`, `build`,
 `ci`, `test`, `docs`, `lint`. Examples from `git log`:
 
-```
+```text
 refactor(surface): decompose make_figure and name tunables
 perf(plot): lazy-import kinds and clean up browser staging files
 build: tighten sljit visibility and share benchmark objects
@@ -120,7 +120,7 @@ comments:
 - AI tool names (Codex, Claude, Grok, Gemini, …) — including
   `Co-Authored-By:` footers.
 - Process narration ("FIXED", "Step 3", "Week 2", "Phase 1",
-  "AC-x"). Write what the change *is*, not how the work
+  "AC-x"). Write what the change _is_, not how the work
   progressed.
 
 ## Branches and PRs
@@ -132,36 +132,36 @@ type vocabulary: `feat/branch-history-footprint`,
 
 PRs target `main`. CI must be green:
 
-| Workflow             | What it gates                                                                |
-|----------------------|------------------------------------------------------------------------------|
-| `lint.yml`           | `cmake -S . -B build … && ./scripts/lint.sh` (clang-format, ruff, clang-tidy) |
-| `build.yml`          | Build + ctest across gcc-13/14, clang-17/18 on linux-x86_64; gcc-14/clang-18 on linux-arm64; Apple Clang on macos-arm64 |
-| `python.yml`         | `scripts/test_py.sh` + integration tests on linux-nix, linux-pip, macos-pip   |
-| `sanitizers.yml`     | `address+undefined` (all OS) + `thread` (Linux only) on Debug builds         |
-| `nix.yml`            | `nix flake check`                                                            |
-| `codeql.yml`         | CodeQL c-cpp + python; weekly cron                                           |
-| `zizmor.yml`         | Workflow YAML security audit; weekly cron                                    |
+| Workflow         | What it gates                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `lint.yml`       | `cmake -S . -B build … && ./scripts/lint.sh` (clang-format, ruff, clang-tidy)                                           |
+| `build.yml`      | Build + ctest across gcc-13/14, clang-17/18 on linux-x86_64; gcc-14/clang-18 on linux-arm64; Apple Clang on macos-arm64 |
+| `python.yml`     | `scripts/test_py.sh` + integration tests on linux-nix, linux-pip, macos-pip                                             |
+| `sanitizers.yml` | `address+undefined` (all OS) + `thread` (Linux only) on Debug builds                                                    |
+| `nix.yml`        | `nix flake check`                                                                                                       |
+| `codeql.yml`     | CodeQL c-cpp + python; weekly cron                                                                                      |
+| `zizmor.yml`     | Workflow YAML security audit; weekly cron                                                                               |
 
 ## Footguns
 
 - **`lint.sh` exits 1 with no useful output if `build/compile_commands.json` is missing.** The configure step is not optional.
 - **clang-tidy from non-Nix toolchains may diverge** from the version CI pins. If `./scripts/lint.sh` passes locally but the `lint.yml` job fails, suspect version skew — re-run under `nix develop`.
 - **kaleido version split.** The Nix dev shell currently ships kaleido 0.2.1 (nixpkgs-25.11); the pip path uses `>=1.0`. The two have different internal export paths. `test_integration_export.py` exercises both in CI; expect different code paths on each.
-- **`pinning` privileged operations skip silently.** `pin_to_core`, `boost_priority` (via `setpriority(-10)`), and `lock_memory` (`mlockall`) need elevated privileges. The corresponding tests skip themselves when `geteuid() != 0`. Benchmark *correctness* is unaffected, but *timing reproducibility* requires running as root or with the right capabilities.
+- **`pinning` privileged operations skip silently.** `pin_to_core`, `boost_priority` (via `setpriority(-10)`), and `lock_memory` (`mlockall`) need elevated privileges. The corresponding tests skip themselves when `geteuid() != 0`. Benchmark _correctness_ is unaffected, but _timing reproducibility_ requires running as root or with the right capabilities.
 - **`detect_leaks` on macOS aborts startup.** Do not name it in `ASAN_OPTIONS` when running sanitizer tests on macOS — see [`docs/build.md`](docs/build.md).
-- **Apple Silicon has no per-core affinity.** `--core=N` is informational on macOS arm64; probe and benchmark land on *some* P-core, not necessarily the same one. See the README's discipline section.
+- **Apple Silicon has no per-core affinity.** `--core=N` is informational on macOS arm64; probe and benchmark land on _some_ P-core, not necessarily the same one. See the README's discipline section.
 - **`benchmark-results/` is not gitignored** while `*.csv`, `*.html`, and `*.png` are. Take care not to commit large CSV/PNG outputs into other paths.
 
 ## Where to find things
 
-| If you need…                              | Read this                                           |
-|-------------------------------------------|-----------------------------------------------------|
-| Module map of `src/` and `include/ferret/` | [`docs/architecture.md`](docs/architecture.md)      |
-| How to add a benchmark                    | [`docs/writing-a-benchmark.md`](docs/writing-a-benchmark.md) |
-| Global `ferret run` flags and axis syntax | [`docs/cli.md`](docs/cli.md)                        |
-| Full build options + sanitizer matrix     | [`docs/build.md`](docs/build.md)                    |
-| Per-benchmark kernel structure            | [`docs/benchmarks/`](docs/benchmarks/)              |
-| Frequency probe, benchmark, and plot workflow + caveats | [`README.md`](README.md)                 |
+| If you need…                                            | Read this                                                    |
+| ------------------------------------------------------- | ------------------------------------------------------------ |
+| Module map of `src/` and `include/ferret/`              | [`docs/architecture.md`](docs/architecture.md)               |
+| How to add a benchmark                                  | [`docs/writing-a-benchmark.md`](docs/writing-a-benchmark.md) |
+| Global `ferret run` flags and axis syntax               | [`docs/cli.md`](docs/cli.md)                                 |
+| Full build options + sanitizer matrix                   | [`docs/build.md`](docs/build.md)                             |
+| Per-benchmark kernel structure                          | [`docs/benchmarks/`](docs/benchmarks/)                       |
+| Frequency probe, benchmark, and plot workflow + caveats | [`README.md`](README.md)                                     |
 
 `superpowers/specs/` and `superpowers/plans/` are point-in-time
 artifacts. If they disagree with current code, the code is right.

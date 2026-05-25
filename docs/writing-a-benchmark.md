@@ -20,7 +20,7 @@ The runner does the rest.
   `geom_range` is `log2_range` when `samples_per_octave == 1`; pick
   a larger `k` when the capacity cliff under test sits between two
   adjacent powers of two and you want denser default sampling.
-- **`options()`** *(optional, defaults to `{}`)* — returns scalar
+- **`options()`** _(optional, defaults to `{}`)_ — returns scalar
   non-swept knobs. Each appears as a `--<name>=<v>` CLI flag and is
   recorded in the CSV one column after the axes. Override only when
   your benchmark exposes per-bench options.
@@ -32,10 +32,10 @@ The runner does the rest.
 - **`emit_kernel(c, p)`** — emits the actual measurement kernel into
   `c` via sljit. The kernel must end with a return. If a parameter
   point is invalid at the ISA level (e.g., `spacing_bytes` too small),
-  `throw std::invalid_argument` *before* touching `c` so the compiler
+  `throw std::invalid_argument` _before_ touching `c` so the compiler
   state stays clean. Any sljit error set on `c` propagates to
   `JittedKernel::ok() == false`.
-- **`verify_layout(c)`** *(optional, defaults to no-op)* — called once
+- **`verify_layout(c)`** _(optional, defaults to no-op)_ — called once
   per row after `sljit_generate_code` while the compiler is still
   alive. Label addresses are only valid in that window, and post-
   generate patches need `sljit_get_executable_offset(c)` to find the

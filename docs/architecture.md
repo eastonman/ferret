@@ -8,7 +8,7 @@ records and may be out of date.
 
 ## End-to-end flow
 
-```
+```text
 main.cpp (CLI11 wiring)
   → ferret::list_command()        → stdout
   → ferret::run(RunOptions)
