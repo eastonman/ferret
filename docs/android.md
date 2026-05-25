@@ -6,8 +6,8 @@ page is a human-run workflow for cross-compiling, staging the binary on a
 device with `adb`, running smoke checks, and pulling CSV results back to
 the host for plotting.
 
-Use this workflow when you want to validate ferret on a real phone such
-as a Snapdragon 888 device.
+Use this workflow when you want to validate ferret on a real phone —
+for example a Snapdragon 888 or Snapdragon 8 Gen 3 device.
 
 ## Prerequisites
 
@@ -29,15 +29,16 @@ the USB debugging prompt.
 
 ## Cross-Compile
 
-Use a target build tree. Do not use the canonical host `build/`
-directory; `build/` is reserved for local host development and
-`scripts/lint.sh`.
+Use a target build tree separate from the host `build/`. `scripts/lint.sh`
+reads `build/compile_commands.json` to pick the files it lints, so the
+host `build/` must keep host-compiled compile commands; do not let an
+Android configure overwrite them.
 
 ```sh
 cmake -S . -B build-android-arm64 -GNinja \
   -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
   -DANDROID_ABI=arm64-v8a \
-  -DANDROID_PLATFORM=android-26 \
+  -DANDROID_PLATFORM=android-31 \
   -DCMAKE_BUILD_TYPE=Release
 cmake --build build-android-arm64
 ```
@@ -78,9 +79,9 @@ that needs investigation.
 
 Pick one core and use the same core for the frequency probe and the
 target benchmark. The examples below use core 0 because every Android
-device has it. For Snapdragon 888 investigations, you may want a big or
-prime core instead; verify the device's CPU numbering before comparing
-results across runs.
+device has it. For frontend investigations you usually want a big or
+prime core instead; see "Android CPU Numbering" below to pick one for
+the SoC under test.
 
 First run the frequency probe on the phone and pull the CSV back:
 
@@ -113,15 +114,48 @@ Android phones are noisy benchmark hosts. Keep the device cool, plugged
 in, unlocked if needed, and as idle as practical. Disable background
 work when possible.
 
-Snapdragon 888 is heterogeneous: it has efficiency cores, performance
-cores, and a prime core. Different cores can have different frontend
-structures and different frequencies. Always record the core number and
-keep the frequency probe and target benchmark on the same core.
+Modern Android SoCs are heterogeneous: each one mixes efficiency cores,
+performance cores, and (typically) a single prime core. Different cores
+have different frontend structures and different frequencies. Always
+record the core number and keep the frequency probe and target benchmark
+on the same core.
 
 Ferret's system controls are best-effort in Android user space.
 `pin_to_core`, priority boost, and memory locking may fail on non-root
 devices. Ferret should warn and continue; benchmark timing quality is
 the operator's responsibility.
+
+## Android CPU Numbering
+
+By Linux/Android convention, `/sys/devices/system/cpu/cpuN` is the
+logical CPU number the kernel exposes, and Qualcomm SoCs in the
+Snapdragon 8-series number cores from lowest-class (efficiency) to
+highest-class (prime), in cluster order. CPU 0 is therefore the slowest
+core on the chip and the highest-numbered CPU is the prime core. Pass
+the number you want with `--core=N`.
+
+Confirm the layout on the device under test before pinning:
+
+```sh
+adb shell 'cat /proc/cpuinfo | grep "CPU part"'
+adb shell 'for c in /sys/devices/system/cpu/cpu*/cpufreq/cpuinfo_max_freq; do
+  echo -n "$c "; cat $c
+done'
+```
+
+`CPU part` values map to ARM core names (e.g. `0xd44 = Cortex-X1`,
+`0xd82 = Cortex-X4`). For reference, two SoCs the runbook has been used
+on:
+
+| SoC | CPU 0–N | Cluster mapping |
+|---|---|---|
+| Snapdragon 888 (lahaina) | 0–3 / 4–6 / 7 | Cortex-A55 / Cortex-A78 / Cortex-X1 (prime) |
+| Snapdragon 8 Gen 3 (pineapple / SM8650) | 0–1 / 2–4 / 5–6 / 7 | Cortex-A520 / Cortex-A720 (fast) / Cortex-A720 (slow) / Cortex-X4 (prime) |
+
+On both, `--core=7` selects the prime core and `--core=0` selects the
+slowest efficiency core. Other SoCs follow the same low-to-high
+convention but cluster sizes vary, so always confirm with the commands
+above.
 
 ## Troubleshooting
 
