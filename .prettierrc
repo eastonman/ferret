@@ -12,6 +12,12 @@
         "singleQuote": false,
         "bracketSpacing": true
       }
+    },
+    {
+      "files": ["*.md"],
+      "options": {
+        "proseWrap": "preserve"
+      }
     }
   ]
 }

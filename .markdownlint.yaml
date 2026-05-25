@@ -1,0 +1,14 @@
+default: true
+
+# Line length is handled by prettier (`proseWrap: preserve`), and rigid
+# enforcement breaks tables, long URLs, and code fences.
+MD013: false
+
+# Allow inline HTML (used in docs for callouts and details/summary).
+MD033: false
+
+# Bare URLs appear in benchmark and reference docs intentionally.
+MD034: false
+
+# Not every doc starts with an H1 (e.g. partials, included fragments).
+MD041: false

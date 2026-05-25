@@ -1,0 +1,5 @@
+build/
+_deps/
+node_modules/
+# Frozen agent-generated plan/spec artifacts — preserve verbatim.
+docs/superpowers/

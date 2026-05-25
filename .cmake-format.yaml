@@ -1,0 +1,26 @@
+format:
+  line_width: 120
+  tab_size: 2
+  use_tabchars: false
+  # Closing ')' on its own line — matches the existing FetchContent /
+  # target_compile_options style and keeps multi-arg calls readable.
+  dangle_parens: true
+  max_subgroups_hwrap: 2
+  # Default (6) forces `string(JSON … GET …)` and similar 7-9-arg calls
+  # to one-arg-per-line; 10 keeps them readable on a single 120-col line.
+  max_pargs_hwrap: 10
+  separate_ctrl_name_with_space: false
+  separate_fn_name_with_space: false
+
+markup:
+  # Comments are hand-wrapped at ~75 cols for readability. Treating them
+  # as markdown paragraphs and reflowing to line_width destroys that.
+  enable_markup: false
+
+lint:
+  # C0301 (line-too-long) overlaps with format.line_width; the formatter
+  # owns wrapping. C0103 (invalid-argument-name) fires on CMake-canonical
+  # ALL_CAPS keywords the formatter cannot rename.
+  disabled_codes:
+    - C0301
+    - C0103

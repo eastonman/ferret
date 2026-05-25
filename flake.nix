@@ -27,11 +27,14 @@
           packages =
             [
               pkgs.cmake
+              pkgs.cmake-format
               pkgs.ninja
               pkgs.clang
               pkgs.clang-tools
               pkgs.cli11
               pkgs.gtest
+              pkgs.markdownlint-cli2
+              pkgs.nodePackages.prettier
               pkgs.ruff
               pkgs.spdlog
               sljit
