@@ -29,6 +29,13 @@ mapfile -t CXX_LINT_FILES < <(
     | sort -u
 )
 
+# CMake files mirror format.sh's set so check + apply stay symmetric.
+mapfile -t CMAKE_FILES < <(
+  find . \
+    \( -path ./build -o -path ./.git -o -path ./_deps \) -prune -o \
+    \( -name 'CMakeLists.txt' -o -name '*.cmake' \) -type f -print
+)
+
 echo "==> clang-format --dry-run"
 clang-format --dry-run --Werror "${CXX_FORMAT_FILES[@]}"
 
@@ -37,6 +44,18 @@ ruff format --check scripts/ tests/python/
 
 echo "==> ruff check"
 ruff check scripts/ tests/python/
+
+echo "==> cmake-format --check"
+cmake-format --check "${CMAKE_FILES[@]}"
+
+echo "==> cmake-lint"
+cmake-lint "${CMAKE_FILES[@]}"
+
+echo "==> prettier --check"
+prettier --check '**/*.md'
+
+echo "==> markdownlint-cli2"
+markdownlint-cli2 '**/*.md' '#build' '#_deps' '#node_modules' '#docs/superpowers'
 
 echo "==> clang-tidy"
 # clang-tidy from nixpkgs is unwrapped, so the C++ stdlib search paths

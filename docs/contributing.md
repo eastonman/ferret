@@ -15,6 +15,12 @@ Formatters and linters run in CI and must pass before merging.
   (checks in `.clang-tidy`, `WarningsAsErrors: '*'`).
 - Python: `ruff format` and `ruff check` (config in `pyproject.toml`,
   requires `ruff>=0.14`).
+- CMake: `cmake-format` and `cmake-lint` (config in
+  `.cmake-format.yaml`).
+- Markdown: `prettier` (config in `.prettierrc`, ignores in
+  `.prettierignore`) and `markdownlint-cli2` (rules in
+  `.markdownlint.yaml`). Files under `docs/superpowers/` are frozen
+  agent artifacts and excluded from both.
 
 Apply formatters locally:
 
