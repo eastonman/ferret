@@ -15,7 +15,7 @@ the outer loop and calling `BODY_depth`. Each `BODY_d` calls
 `BODY_{d-1}` through one or more dispatch-selected sites. `BODY_0`
 is a bare RET.
 
-```
+```text
  chain_main:                    BODY_d  (variant 1, 1 ≤ d ≤ depth):
  ┌─────────────────────────┐    ┌──────────────────────────┐
  │ MOV  S0, iters          │    │ AND  S0, 1               │
@@ -123,13 +123,13 @@ Global flags (`--core`, `--freq`, `--reps`, `--warmup`, `--out`,
 the table below lists only the axes and options specific to this
 benchmark.
 
-| flag                  | meaning                                                  |
-| --------------------- | -------------------------------------------------------- |
-| `--depth=A..B`        | Sweep nesting depth from A to B inclusive, step 1.       |
-| `--depth=v1,v2,…`     | Sweep an explicit list of depths.                        |
-| `--variant=0\|1\|2`   | Kernel construction (default 1). See the variants section above. |
+| flag                  | meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--depth=A..B`        | Sweep nesting depth from A to B inclusive, step 1.                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `--depth=v1,v2,…`     | Sweep an explicit list of depths.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `--variant=0\|1\|2`   | Kernel construction (default 1). See the variants section above.                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `--path_table_rows=N` | Used **only by variant 2**. Per-iteration dispatch table row count, default 256, must be a power of two ≥ 2. Bigger ⇒ longer dispatch-pattern period (harder for indirect predictors to learn) but bigger memory footprint (`N × (depth+1)` bytes); once the table exceeds L1D, per-call cost inflates progressively with depth and the pre-cliff curve becomes a measurement of cache pressure rather than RAS pressure. The default keeps the table at ≤ 16 KB through depth 64 so it stays in L1D on every shipping core. |
-| `--seed=…`            | Seeds the variant-2 path-table PRNG; combined with `depth` via `std::seed_seq` so distinct sweep points get distinct dispatch streams. Ignored by variants 0 and 1. |
+| `--seed=…`            | Seeds the variant-2 path-table PRNG; combined with `depth` via `std::seed_seq` so distinct sweep points get distinct dispatch streams. Ignored by variants 0 and 1.                                                                                                                                                                                                                                                                                                                                                          |
 
 ## Reading the curves
 
@@ -140,7 +140,7 @@ to a higher plateau as rets either mispredict or stall.
 Real example, Apple Silicon P-core, `--depth=1..64`, all three
 variants on the same core:
 
-```
+```text
 depth   variant 0 (none)  variant 1 (K=2)  variant 2 (K=8 table)
    1          4.0               2.9                7.3
    4          3.5               2.8                7.4
@@ -180,7 +180,7 @@ variant 2 there.
   state. See the project README's discipline section.
 - **macOS / Apple Silicon pinning.** macOS rejects per-core pin requests;
   ferret prints a warning and falls back to a P-cluster QoS hint. Probe
-  and benchmark land on *some* P-core but not necessarily the same one,
+  and benchmark land on _some_ P-core but not necessarily the same one,
   so cycle counts are stable per-cluster, not per-core. Use
   `taskpolicy -b` or `sudo nice` if you need stronger guarantees.
 - **Predictor sophistication.** The cliff height depends on how weak the

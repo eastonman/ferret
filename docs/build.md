@@ -55,24 +55,24 @@ output has no such requirement.
 
 ## CMake knobs
 
-| Option                            | Default | Purpose                                                                 |
-|-----------------------------------|---------|-------------------------------------------------------------------------|
-| `-DFERRET_WERROR=ON\|OFF`         | `ON`    | Treat warnings as errors on ferret's own targets (vendored deps unaffected). Turn off for one-off local builds against a newer compiler. CI runs with the default `ON`. |
-| `-DFERRET_SANITIZER=<mode>`       | unset   | Enable a sanitizer build (see below).                                   |
-| `-DCMAKE_BUILD_TYPE=<type>`       | unset   | Debug / Release / RelWithDebInfo. CI build job leaves this unset; sanitizer jobs set `Debug`. |
-| `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` | off  | Required for `scripts/lint.sh` (clang-tidy reads `build/compile_commands.json`). |
+| Option                               | Default | Purpose                                                                                                                                                                 |
+| ------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-DFERRET_WERROR=ON\|OFF`            | `ON`    | Treat warnings as errors on ferret's own targets (vendored deps unaffected). Turn off for one-off local builds against a newer compiler. CI runs with the default `ON`. |
+| `-DFERRET_SANITIZER=<mode>`          | unset   | Enable a sanitizer build (see below).                                                                                                                                   |
+| `-DCMAKE_BUILD_TYPE=<type>`          | unset   | Debug / Release / RelWithDebInfo. CI build job leaves this unset; sanitizer jobs set `Debug`.                                                                           |
+| `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` | off     | Required for `scripts/lint.sh` (clang-tidy reads `build/compile_commands.json`).                                                                                        |
 
 ## Sanitizer builds
 
 Off by default — timing-sensitive runs use clean code. Enable via
 `-DFERRET_SANITIZER=<mode>`:
 
-| Mode                | Catches                                                      |
-|---------------------|--------------------------------------------------------------|
-| `address`           | use-after-free, heap/stack overflow, leaks (LSan, Linux)     |
-| `undefined`         | signed overflow, null deref, alignment, type mismatches      |
-| `address+undefined` | both of the above (default in CI)                            |
-| `thread`            | data races, deadlocks                                        |
+| Mode                | Catches                                                  |
+| ------------------- | -------------------------------------------------------- |
+| `address`           | use-after-free, heap/stack overflow, leaks (LSan, Linux) |
+| `undefined`         | signed overflow, null deref, alignment, type mismatches  |
+| `address+undefined` | both of the above (default in CI)                        |
+| `thread`            | data races, deadlocks                                    |
 
 ```sh
 cmake -S . -B build-asan -GNinja -DCMAKE_BUILD_TYPE=Debug -DFERRET_SANITIZER=address+undefined

@@ -7,7 +7,7 @@ those.
 
 ## Global flags
 
-```
+```text
 ferret run <name> [options] [--<axis>=value-or-range] [--<benchmark-option>=v]
   --out=PATH        CSV output (default stdout)
   --core=N          pin measurement thread to core N
@@ -38,7 +38,7 @@ to `log2_range`), `Axis::values` is list-only.
 ## Options vs axes
 
 Options are scalar per-benchmark knobs — they appear as `--<opt>=v`
-but are *not* swept. Every CSV row records the same option value.
+but are _not_ swept. Every CSV row records the same option value.
 Each benchmark page lists the options it accepts.
 
 ## Discovery
@@ -64,7 +64,7 @@ for the `axes()` and `options()` overrides.
 `scripts/plot.py` exposes four rendering kinds; each accepts a CSV
 produced by `ferret run`.
 
-```
+```text
 python3 scripts/plot.py line     FILE.csv [--benchmark=NAME] [--x=COL] [--xscale=log|linear] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--metric=auto|cycles|ns] [--stat=min|median] [--ymax=N] [--series=COL,...]
 python3 scripts/plot.py heatmap  FILE.csv [--benchmark=NAME] [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz]
 python3 scripts/plot.py surface  FILE.csv [--benchmark=NAME] [--x=COL] [--y=COL] [--out=PATH] [--format=FMT] [--html-js=cdn|inline|sibling] [--cmap=NAME] [--metric=auto|cycles|ns] [--stat=min|median] [--logz] [--elev=DEG] [--azim=DEG]

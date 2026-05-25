@@ -12,7 +12,7 @@ for the two-step cycle workflow.
 
 ## Kernel structure
 
-```
+```text
  (chain_main)
   MOV R0, 1
   MOV R1, full_blocks        ─── outer-loop counter
@@ -49,9 +49,9 @@ Annotated:
 
 ## CLI surface
 
-| flag                    | meaning                                                                 |
-| ----------------------- | ----------------------------------------------------------------------- |
-| `--chain_length=N`      | Total ADD count emitted into the kernel. Default `100_000_000`.         |
+| flag               | meaning                                                         |
+| ------------------ | --------------------------------------------------------------- |
+| `--chain_length=N` | Total ADD count emitted into the kernel. Default `100_000_000`. |
 
 See [`../cli.md`](../cli.md) for global flags (`--core`, `--freq`,
 `--reps`, `--warmup`, `--out`, etc.).

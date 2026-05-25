@@ -10,7 +10,7 @@ The cliff position is the direct-jump BTB capacity.
 
 ## Kernel structure
 
-```
+```text
    PC                  site
  0x0000   ┌───────────────────────────┐
           │  B   target_0             │ ──┐
@@ -52,7 +52,7 @@ Annotated:
 `--sattolo_permute=0|1` (default `0`).
 
 - `0`: wires each branch to fall through to the next in layout order.
-  Sequential PC walk — measures BTB *plus* whatever sequential
+  Sequential PC walk — measures BTB _plus_ whatever sequential
   prefetch the front-end does.
 - `1`: rewires the jump targets as a uniform random Hamiltonian
   cycle over the same `N` branches (Sattolo's algorithm, seeded by
@@ -63,14 +63,14 @@ Annotated:
 
 ## CLI surface
 
-| flag                       | meaning                                                                |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `--branches=A..B`          | Geometric sweep, default `k=1` (same as log₂), e.g. `1..32768`.        |
-| `--branches=A..B@k`        | Geometric sweep with `k` samples per octave, e.g. `1024..4096@4`.      |
-| `--branches=v1,v2,…`       | Explicit list.                                                         |
-| `--spacing_bytes=A..B`     | Log₂ sweep over `{16, 32, 64, 128}`. Site stride.                      |
-| `--sattolo_permute=0\|1`   | See above. Default `0`.                                                |
-| `--seed=…`                 | Seeds the Sattolo cycle (mixed with branches/spacing).                 |
+| flag                     | meaning                                                           |
+| ------------------------ | ----------------------------------------------------------------- |
+| `--branches=A..B`        | Geometric sweep, default `k=1` (same as log₂), e.g. `1..32768`.   |
+| `--branches=A..B@k`      | Geometric sweep with `k` samples per octave, e.g. `1024..4096@4`. |
+| `--branches=v1,v2,…`     | Explicit list.                                                    |
+| `--spacing_bytes=A..B`   | Log₂ sweep over `{16, 32, 64, 128}`. Site stride.                 |
+| `--sattolo_permute=0\|1` | See above. Default `0`.                                           |
+| `--seed=…`               | Seeds the Sattolo cycle (mixed with branches/spacing).            |
 
 See [`../cli.md`](../cli.md) for global flags.
 
@@ -95,7 +95,7 @@ sharpens the cliff.
   is 5 B; `spacing_bytes` ≥ 5 (must also be `kBranchAlign`-aligned,
   which is 1 on x86_64 and 4 on AArch64).
 - **Apple Silicon pinning.** See the project README's discipline
-  section — probe and benchmark land on *some* P-core, not
+  section — probe and benchmark land on _some_ P-core, not
   necessarily the same one.
 
 ## Related docs
