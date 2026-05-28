@@ -4,6 +4,11 @@
 #include <cstdint>
 
 namespace ferret {
+class Benchmark;
+class Params;
+}  // namespace ferret
+
+namespace ferret {
 
 struct MeasurementRow {
   uint64_t ticks_min = 0;
@@ -31,6 +36,17 @@ struct MeasureOptions {
 // through to MeasurementRow purely for normalization downstream — they
 // are not used by measure() to drive iteration count.
 MeasurementRow measure(KernelFn fn, const MeasureOptions& opts);
+
+// Builds a JittedKernel for `b` at `p`, runs runner::measure on it, and
+// fills the resulting MeasurementRow with iters / sites taken from the
+// benchmark. The default measure_row strategy for benchmarks that time
+// a single JIT'd kernel — differencing benchmarks override measure_row
+// directly and don't use this helper.
+//
+// On JIT failure, returns a row with .jit_failed = true and
+// .iters/.sites pre-populated. Propagates std::exception from
+// emit_kernel/verify_layout to the caller.
+MeasurementRow single_kernel_measure(Benchmark& b, const Params& p, int reps, int warmup);
 
 }  // namespace runner
 }  // namespace ferret

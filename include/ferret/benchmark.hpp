@@ -8,6 +8,7 @@
 
 #include "ferret/axis.hpp"
 #include "ferret/params.hpp"
+#include "ferret/runner.hpp"
 
 // Forward-declare sljit_compiler so headers don't pull in sljitLir.h
 // transitively. Implementations include sljitLir.h directly.
@@ -67,6 +68,13 @@ class Benchmark {
   // resolve hand-emitted jump displacements. Throw on mismatch; the
   // runner emits the row as a JIT failure.
   virtual void verify_layout(sljit_compiler* c) { (void)c; }
+
+  // Per-row measurement strategy. Most benchmarks build one JIT'd
+  // kernel and time it; they implement this as a one-liner that calls
+  // runner::single_kernel_measure(*this, p, reps, warmup). Benchmarks
+  // that need a richer strategy (e.g. train_betray_latency, which times
+  // two kernels and reports the difference) override directly.
+  virtual MeasurementRow measure_row(const Params& p, int reps, int warmup) = 0;
 };
 
 // Static singleton registry. Benchmark subclasses normally register
