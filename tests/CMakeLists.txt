@@ -94,6 +94,14 @@ add_executable(test_run_options test_run_options.cpp)
 target_link_libraries(test_run_options PRIVATE ferret_core GTest::gtest GTest::gtest_main ferret_warnings)
 gtest_discover_tests(test_run_options)
 
+add_executable(test_train_betray_latency test_train_betray_latency.cpp)
+target_sources(test_train_betray_latency PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_train_betray_latency PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                    ferret_warnings
+)
+gtest_discover_tests(test_train_betray_latency)
+
 add_executable(test_integration test_integration.cpp)
 target_compile_definitions(test_integration PRIVATE FERRET_BINARY="$<TARGET_FILE:ferret>")
 add_dependencies(test_integration ferret)
