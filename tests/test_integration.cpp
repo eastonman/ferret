@@ -261,11 +261,12 @@ TEST(Integration, NegativeBranchesExitsTwoNoCrash) {
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
 }
 
-TEST(Integration, HugeBranchesExitsTwoNoCrash) {
+TEST(Integration, HugeBranchesEmitsEmptyRowNoCrash) {
   // Extreme positive value: log2 axis accepts it (positive), but the
   // benchmark allocator throws std::length_error / std::bad_alloc.
-  // ferret::run must catch and translate to exit 2, and must not leak
-  // a CSV header to stdout (no partial output on user-error paths).
+  // ferret::run records the point as an empty row so full-sweep
+  // artifacts remain usable even when one generated kernel is too big
+  // for the host.
   auto out = std::filesystem::temp_directory_path() / "ferret_branchesHuge_out.txt";
   auto err = std::filesystem::temp_directory_path() / "ferret_branchesHuge_err.txt";
   TempFileGuard guard_out{out};
@@ -276,17 +277,19 @@ TEST(Integration, HugeBranchesExitsTwoNoCrash) {
                     " > " +
                     out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
-  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  EXPECT_EQ(rc, 0) << "expected exit 0, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   std::string out_contents = slurp(out.string());
-  EXPECT_TRUE(out_contents.empty()) << "expected stdout to be empty (no partial CSV), got: " << out_contents;
+  size_t newlines = std::count(out_contents.begin(), out_contents.end(), '\n');
+  EXPECT_EQ(newlines, 2u);
+  EXPECT_NE(out_contents.find("4611686018427387904,64,0,1,,,,,,,"), std::string::npos);
 }
 
-TEST(Integration, MixedSweepHugeRowExitsTwoNoPartialOutput) {
-  // First sweep value succeeds; second is a huge log2 value that throws
-  // inside emit_kernel. Buffer-then-flush semantics require the output
-  // file/stdout to stay empty even though earlier rows succeeded.
+TEST(Integration, MixedSweepHugeRowEmitsEmptyRow) {
+  // First sweep value succeeds; second is huge enough to fail during
+  // codegen/resource allocation. Full benchmark sweeps should keep the
+  // artifact usable by recording that failed point as an empty row.
   auto out = std::filesystem::temp_directory_path() / "ferret_mix_out.txt";
   auto err = std::filesystem::temp_directory_path() / "ferret_mix_err.txt";
   TempFileGuard guard_out{out};
@@ -297,17 +300,17 @@ TEST(Integration, MixedSweepHugeRowExitsTwoNoPartialOutput) {
                     " > " +
                     out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
-  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  EXPECT_EQ(rc, 0) << "expected exit 0, got " << rc;
   std::string err_contents = slurp(err.string());
   EXPECT_NE(err_contents.find("ferret:"), std::string::npos);
   std::string out_contents = slurp(out.string());
-  EXPECT_TRUE(out_contents.empty()) << "expected stdout empty (no partial CSV from earlier successful row), got: "
-                                    << out_contents;
+  size_t newlines = std::count(out_contents.begin(), out_contents.end(), '\n');
+  EXPECT_EQ(newlines, 3u);  // header + successful row + empty failure row
+  EXPECT_NE(out_contents.find("4611686018427387904,64,0,1,,,,,,,"), std::string::npos);
 }
 
-TEST(Integration, MixedSweepHugeRowOutFileStaysEmpty) {
-  // Same scenario but with --out=PATH. The file must end empty so the
-  // user doesn't get a misleading partial CSV.
+TEST(Integration, MixedSweepHugeRowOutFileKeepsEmptyRow) {
+  // Same scenario but with --out=PATH.
   auto out = std::filesystem::temp_directory_path() / "ferret_mix_outfile.csv";
   auto err = std::filesystem::temp_directory_path() / "ferret_mix_outfile_err.txt";
   TempFileGuard guard_out{out};
@@ -318,9 +321,12 @@ TEST(Integration, MixedSweepHugeRowOutFileStaysEmpty) {
                     " --out=" +
                     out.string() + " 2> " + err.string();
   int rc = actual_exit_code(std::system(cmd.c_str()));
-  EXPECT_EQ(rc, 2) << "expected exit 2, got " << rc;
+  EXPECT_EQ(rc, 0) << "expected exit 0, got " << rc;
   ASSERT_TRUE(std::filesystem::exists(out));
-  EXPECT_EQ(0u, std::filesystem::file_size(out)) << "expected output file empty (no partial CSV)";
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 3u);
+  EXPECT_NE(contents.find("4611686018427387904,64,0,1,,,,,,,"), std::string::npos);
 }
 
 TEST(Integration, FreqInfExitsTwoNoCrash) {
