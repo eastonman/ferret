@@ -63,15 +63,15 @@ Annotated:
 
 ## CLI surface
 
-| flag                     | meaning                                         |
-| ------------------------ | ----------------------------------------------- |
-| `--branches=A..B`        | Geometric sweep, default `k=1`, e.g. `1..512`.  |
-| `--branches=A..B@k`      | Geometric sweep with `k` samples per octave.    |
-| `--branches=v1,v2,…`     | Explicit list.                                  |
-| `--history_len=A..B[@k]` | Same syntax as `--branches`. Default `4..4096`. |
-| `--pattern=0\|1`         | See above. Default `1`.                         |
-| `--spacing_bytes=N`      | Minimum per-site PC stride. Default 16.         |
-| `--seed=…`               | Seeds the per-branch random fill.               |
+| flag                     | meaning                                          |
+| ------------------------ | ------------------------------------------------ |
+| `--branches=A..B`        | Geometric sweep, default `k=2`, e.g. `16..4096`. |
+| `--branches=A..B@k`      | Geometric sweep with `k` samples per octave.     |
+| `--branches=v1,v2,…`     | Explicit list.                                   |
+| `--history_len=A..B[@k]` | Same syntax as `--branches`. Default `1..4096`.  |
+| `--pattern=0\|1`         | See above. Default `1`.                          |
+| `--spacing_bytes=N`      | Minimum per-site PC stride. Default 16.          |
+| `--seed=…`               | Seeds the per-branch random fill.                |
 
 See [`../cli.md`](../cli.md) for global flags.
 
@@ -99,12 +99,12 @@ predictor-driven, not kernel-driven.
 ## Caveats
 
 - **Small `history_len` is a near-flat baseline.** The leftmost
-  columns of the heatmap (history_len 4, 8) are intended as a
+  columns of the heatmap (history_len 1, 2, 3, 4) are intended as a
   sanity-check baseline. Modern predictors handle them trivially.
-- **`branches=1` carries outer-loop tax.** The chain-tail
+- **Small branch counts carry outer-loop tax.** The chain-tail
   `ADD/CMP/CSEL/SUBS/B.NE` is ~4 cycles per outer iteration regardless
-  of `N`. For `branches=1` that's the dominant cost — read the
-  leftmost column as a tax baseline, not "one-branch predictor cost."
+  of `N`. The default sweep starts at `branches=16` to keep this tax
+  small relative to the per-site direction-prediction signal.
 - **Branch-to-next isolates direction prediction only.** Real-world
   mispredict cost also includes target-redirect latency; this
   benchmark deliberately doesn't measure that.

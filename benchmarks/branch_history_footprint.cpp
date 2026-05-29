@@ -105,8 +105,8 @@ struct BranchHistoryFootprint : Benchmark {
 
   [[nodiscard]] SweepAxes axes() const override {
     return {
-        Axis::geom_range("branches", 1, 1 << 9, /*samples_per_octave=*/1),
-        Axis::geom_range("history_len", 4, 1 << 12, /*samples_per_octave=*/1),
+        Axis::geom_range("branches", 16, 1 << 12, /*samples_per_octave=*/2),
+        Axis::geom_range("history_len", 1, 1 << 12, /*samples_per_octave=*/2),
     };
   }
 

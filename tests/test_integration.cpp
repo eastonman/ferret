@@ -127,7 +127,7 @@ TEST(Integration, DependentChainThroughputProducesOneRow) {
 TEST(Integration, BranchHistoryFootprintProducesExpectedRowCount) {
   auto out = std::filesystem::temp_directory_path() / "ferret_bhf.csv";
   TempFileGuard guard_out{out};
-  // branches ∈ {1,2,4} × history_len ∈ {4,8} → 6 data rows.
+  // branches ∈ {1,2,3,4} × history_len ∈ {4,6,8} → 12 data rows.
   std::string cmd = std::string(FERRET_BINARY) +
                     " run branch_history_footprint"
                     " --branches=1..4 --history_len=4..8"
@@ -139,7 +139,7 @@ TEST(Integration, BranchHistoryFootprintProducesExpectedRowCount) {
 
   std::string contents = slurp(out.string());
   size_t newlines = std::count(contents.begin(), contents.end(), '\n');
-  EXPECT_EQ(newlines, 7u);  // header + 6 data rows
+  EXPECT_EQ(newlines, 13u);  // header + 12 data rows
   EXPECT_EQ(contents.find(",,\n"), std::string::npos);
 }
 

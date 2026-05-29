@@ -56,20 +56,18 @@ TEST(BranchHistoryFootprint, BranchesAxisExpansionMatchesSpec) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   auto vs = b->axes()[0].expand();
-  // 1..512 with k=1: {1,2,4,8,16,32,64,128,256,512} = 10 points.
-  EXPECT_EQ(vs.size(), 10u);
-  EXPECT_EQ(vs.front(), 1);
-  EXPECT_EQ(vs.back(), 512);
+  const std::vector<int64_t> expected{16,  23,  32,  45,   64,   91,   128,  181, 256,
+                                      362, 512, 724, 1024, 1448, 2048, 2896, 4096};
+  EXPECT_EQ(vs, expected);
 }
 
 TEST(BranchHistoryFootprint, HistoryLenAxisExpansionMatchesSpec) {
   auto b = ferret::BenchmarkRegistry::create("branch_history_footprint");
   ASSERT_NE(b, nullptr);
   auto vs = b->axes()[1].expand();
-  // 4..4096 with k=1: {4,8,16,32,64,128,256,512,1024,2048,4096} = 11 points.
-  EXPECT_EQ(vs.size(), 11u);
-  EXPECT_EQ(vs.front(), 4);
-  EXPECT_EQ(vs.back(), 4096);
+  const std::vector<int64_t> expected{1,  2,   3,   4,   6,   8,   11,  16,   23,   32,   45,   64,
+                                      91, 128, 181, 256, 362, 512, 724, 1024, 1448, 2048, 2896, 4096};
+  EXPECT_EQ(vs, expected);
 }
 
 TEST(BranchHistoryFootprint, SitesPerKernelEqualsBranches) {
