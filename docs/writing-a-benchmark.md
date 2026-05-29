@@ -139,7 +139,7 @@ plus ISA-level pre-flight validation.
 struct DirectBranchFootprint : Benchmark {
   [[nodiscard]] SweepAxes axes() const override {
     return {
-        Axis::geom_range("branches", 1, 1 << 15, /*samples_per_octave=*/1),
+        Axis::geom_range("branches", 1, 1 << 10, /*samples_per_octave=*/1),
         Axis::log2_range("spacing_bytes", 16, 128),
     };
   }
@@ -164,8 +164,8 @@ struct DirectBranchFootprint : Benchmark {
 
 Key idioms:
 
-- **A `geom_range` and a `log2_range` axis** — `branches=1..32768`
-  expands to `{1, 2, 4, 8, ..., 32768}` (with `samples_per_octave=1`,
+- **A `geom_range` and a `log2_range` axis** — `branches=1..1024`
+  expands to `{1, 2, 4, 8, ..., 1024}` (with `samples_per_octave=1`,
   identical to `log2_range`; pass `--branches=lo..hi@k` to densify);
   `spacing_bytes=16..128` to `{16, 32, 64, 128}`. The framework takes
   the cartesian product.

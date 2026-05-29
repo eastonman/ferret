@@ -78,35 +78,33 @@ TEST(Integration, DirectBranchFootprintSattoloPermuteHeaderAndRows) {
 }
 
 TEST(Integration, DirectBranchFootprintGeomRangeNonPow2Sweep) {
+#if defined(__x86_64__) || defined(_M_X64)
   auto out = std::filesystem::temp_directory_path() / "ferret_btb_geom.csv";
   TempFileGuard guard_out{out};
-  // Branch range kept small. Larger ranges (e.g., 1024..4096@4) blow up
-  // sljit on x86_64 because emit_nops emits one op_custom per byte of
-  // padding — at spacing=64 that is 59 ops per site, and the per-kernel
-  // op count grows past what sljit's metadata tracking handles. The
-  // values picked here exercise non-pow2 expansion and the CLI @k path
-  // end-to-end without tripping the underlying limit.
   std::string cmd = std::string(FERRET_BINARY) +
                     " run direct_branch_footprint"
-                    " --branches=64..256@2 --spacing_bytes=64"
-                    " --reps=3 --warmup=1"
+                    " --branches=256..1024@4 --spacing_bytes=128"
+                    " --reps=1 --warmup=0"
                     " --out=" +
                     out.string();
   ASSERT_EQ(0, run(cmd));
 
   std::string contents = slurp(out.string());
-  // Header + 5 data rows: expand_geom_range(64, 256, 2) lands on
-  // {64, 91, 128, 181, 256}; hi=256 is on the natural sequence so no
-  // hi-forcing.
+  // Header + 9 data rows: expand_geom_range(256, 1024, 4) lands on
+  // {256, 304, 362, 431, 512, 609, 724, 861, 1024}; hi=1024
+  // is on the natural sequence so no hi-forcing.
   size_t newlines = std::count(contents.begin(), contents.end(), '\n');
-  EXPECT_EQ(newlines, 6u);
+  EXPECT_EQ(newlines, 10u);
   // No empty cells.
   EXPECT_EQ(contents.find(",,"), std::string::npos);
   // Spot-check two non-pow2 values appear as row substrings of the form
   // ",<branches>,<spacing_bytes>," — column 2 is branches, column 3
   // spacing_bytes by ferret convention (first axis is slowest-varying).
-  EXPECT_NE(contents.find(",91,64,"), std::string::npos);
-  EXPECT_NE(contents.find(",181,64,"), std::string::npos);
+  EXPECT_NE(contents.find(",304,128,"), std::string::npos);
+  EXPECT_NE(contents.find(",861,128,"), std::string::npos);
+#else
+  GTEST_SKIP() << "x86_64-only high-padding regression";
+#endif
 }
 
 TEST(Integration, DependentChainThroughputProducesOneRow) {

@@ -70,6 +70,14 @@ target_link_libraries(
 )
 gtest_discover_tests(test_branch_history_footprint)
 
+add_executable(test_direct_branch_footprint test_direct_branch_footprint.cpp)
+target_sources(test_direct_branch_footprint PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_direct_branch_footprint PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                       ferret_warnings
+)
+gtest_discover_tests(test_direct_branch_footprint)
+
 add_executable(test_jit test_jit.cpp)
 target_link_libraries(test_jit PRIVATE ferret_core sljit::sljit GTest::gtest GTest::gtest_main ferret_warnings)
 gtest_discover_tests(test_jit)

@@ -15,11 +15,18 @@ ARTIFACT_PREFIX="${FERRET_BENCHMARK_ARTIFACT_PREFIX:-}"
 
 mkdir -p "$OUT_DIR"
 
+# GitHub Linux runners may allow mlockall(MCL_FUTURE) with a tiny
+# RLIMIT_MEMLOCK. Force memory locking to fail for artifact-generation
+# sweeps so later SLJIT/code/data allocations are not charged against
+# that limit.
+ulimit -l 0 || true
+
 run_benchmark() {
   local bench="$1"
   local plot_kind="$2"
   local extra_output="${3:-}"
   local freq="${4:-}"
+  local extra_args="${5:-}"
   local csv="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.csv"
   local html="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.html"
   local md="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.md"
@@ -29,7 +36,12 @@ run_benchmark() {
   if [[ -n "$freq" ]]; then
     args+=(--freq="$freq")
   fi
+  if [[ -n "$extra_args" ]]; then
+    # shellcheck disable=SC2206
+    args+=($extra_args)
+  fi
   "$FERRET_BIN" "${args[@]}"
+  validate_csv_complete "$csv"
 
   echo "==> rendering $html"
   python3 scripts/plot.py "$plot_kind" "$csv" --out="$html" --html-js=inline
@@ -44,6 +56,42 @@ write_dependent_chain_markdown() {
   local csv="$1"
   local md="$2"
   python3 scripts/write_dependent_chain_markdown.py "$csv" "$md"
+}
+
+validate_csv_complete() {
+  local csv="$1"
+  python3 - "$csv" <<'PY'
+from __future__ import annotations
+
+import csv
+import sys
+
+path = sys.argv[1]
+metric_columns = (
+    "ticks_min",
+    "ticks_median",
+    "iters",
+    "sites_per_iter",
+    "reps",
+    "ns_per_site_min",
+    "ns_per_site_median",
+)
+
+with open(path, newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    missing = [column for column in metric_columns if column not in (reader.fieldnames or [])]
+    if missing:
+        raise SystemExit(f"{path}: missing metric columns: {', '.join(missing)}")
+    empty_rows = []
+    for line_no, row in enumerate(reader, start=2):
+        if any(row[column] == "" for column in metric_columns):
+            empty_rows.append(line_no)
+
+if empty_rows:
+    preview = ", ".join(str(line_no) for line_no in empty_rows[:10])
+    suffix = "" if len(empty_rows) <= 10 else f", ... ({len(empty_rows)} total)"
+    raise SystemExit(f"{path}: empty benchmark metric cells at CSV lines {preview}{suffix}")
+PY
 }
 
 estimate_frequency() {
@@ -134,4 +182,4 @@ case "$(uname -m)" in
 esac
 run_benchmark "direct_branch_footprint" "line" "" "$FREQ" "--branches=16..32768@2 --spacing_bytes=${DIRECT_BRANCH_SPACING_LO}..128"
 run_benchmark "nested_call_depth" "line" "" "$FREQ"
-run_benchmark "branch_history_footprint" "surface" "" "$FREQ"
+run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"
