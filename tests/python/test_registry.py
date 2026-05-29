@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from ferret_plot import registry as reg
 from ferret_plot.errors import PlotError
-from fixtures import dbf_df, dct_df, nced_df
+from fixtures import bhf_df, dbf_df, dct_df, nced_df
 
 
 class TestDetectBenchmark:
@@ -72,6 +72,12 @@ class TestResolveDefaults:
         assert d.heatmap_x is None
         assert d.heatmap_y is None
 
+    def test_bhf_defaults(self):
+        d = reg.resolve_defaults(bhf_df(), override=None)
+        assert d.line_x == "branches"
+        assert d.heatmap_x == "branches"
+        assert d.heatmap_y == "history_len"
+
 
 class TestBenchmarkDefaults:
     """Verify the dataclass exposes every expected default field."""
@@ -110,3 +116,11 @@ class TestRegistryHonesty:
             col = getattr(d, attr)
             if col is not None:
                 assert col in df.columns, f"{attr}={col!r} not in nced_df columns"
+
+    def test_bhf_columns_present(self):
+        df = bhf_df()
+        d = reg.DEFAULTS["branch_history_footprint"]
+        for attr in self._COLUMN_ATTRS:
+            col = getattr(d, attr)
+            if col is not None:
+                assert col in df.columns, f"{attr}={col!r} not in bhf_df columns"

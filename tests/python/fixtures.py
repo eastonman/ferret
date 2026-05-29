@@ -167,3 +167,35 @@ def nced_df(
                 _add_freq(row, ns, freq_hz=4.0e9)
             rows.append(row)
     return pd.DataFrame(rows)
+
+
+def bhf_df(
+    *,
+    branches: tuple[int, ...] = (1, 2, 4, 8),
+    history_lengths: tuple[int, ...] = (4, 8, 16),
+    with_freq: bool = True,
+) -> pd.DataFrame:
+    """branch_history_footprint synthetic frame."""
+    rows = []
+    for b in branches:
+        for h in history_lengths:
+            ns = 0.6 + b * 0.015 + h * 0.002
+            row = {
+                "benchmark": "branch_history_footprint",
+                "branches": b,
+                "history_len": h,
+                "pattern": 1,
+                "spacing_bytes": 16,
+                "seed": 1,
+                "ticks_min": 1000 + b * h,
+                "ticks_median": 1000 + b * h,
+                "iters": 1,
+                "sites_per_iter": b,
+                "reps": 7,
+                "ns_per_site_min": ns,
+                "ns_per_site_median": ns,
+            }
+            if with_freq:
+                _add_freq(row, ns, freq_hz=4.0e9)
+            rows.append(row)
+    return pd.DataFrame(rows)

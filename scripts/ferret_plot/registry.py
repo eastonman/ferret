@@ -42,6 +42,11 @@ DEFAULTS: dict[str, BenchmarkDefaults] = {
         line_x="depth",
         line_xscale="linear",
     ),
+    "branch_history_footprint": BenchmarkDefaults(
+        line_x="branches",
+        heatmap_x="branches",
+        heatmap_y="history_len",
+    ),
 }
 
 
