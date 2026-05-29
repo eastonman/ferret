@@ -242,7 +242,7 @@ def make_figure(df: pd.DataFrame, args: argparse.Namespace) -> go.Figure:
     metric = resolve_metric(df, metric=args.metric, stat=args.stat)
     defaults = resolve_defaults(df, override=args.benchmark)
     xcol, ycol = resolve_heatmap_xy(df, args, defaults)
-    grid = prepare_grid(df, xcol=xcol, ycol=ycol, value_col=metric.column, require_complete=True)
+    grid = prepare_grid(df, xcol=xcol, ycol=ycol, value_col=metric.column)
     z = _z_values(grid)
     assert_finite_metric(z, metric.column)
 
