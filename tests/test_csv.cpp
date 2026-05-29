@@ -27,6 +27,28 @@ TEST(Csv, HeaderWithFreqIncludesCycleColumns) {
   EXPECT_NE(out.find("freq_hz"), std::string::npos);
 }
 
+// Authoritative pin of the metadata column names and order emitted by
+// CsvWriter. The Python plotter's METADATA_COLS and the run_benchmarks.sh
+// validator mirror this; the schema-contract tests enforce the match.
+TEST(Csv, MetadataHeaderExactNoFreq) {
+  std::ostringstream os;
+  CsvWriter w(os, "b", {}, std::nullopt);
+  w.write_header();
+  EXPECT_EQ(os.str(),
+            "benchmark,ticks_min,ticks_median,iters,sites_per_iter,reps,"
+            "ns_per_site_min,ns_per_site_median\n");
+}
+
+TEST(Csv, MetadataHeaderExactWithFreq) {
+  std::ostringstream os;
+  CsvWriter w(os, "b", {}, 4.0e9);
+  w.write_header();
+  EXPECT_EQ(os.str(),
+            "benchmark,ticks_min,ticks_median,iters,sites_per_iter,reps,"
+            "ns_per_site_min,ns_per_site_median,"
+            "cycles_per_site_min,cycles_per_site_median,freq_hz\n");
+}
+
 TEST(Csv, RowFormatNoFreq) {
   std::ostringstream os;
   CsvWriter w(os, "bench", {"x"}, std::nullopt);
