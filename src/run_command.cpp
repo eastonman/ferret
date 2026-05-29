@@ -6,6 +6,7 @@
 #include <map>
 #include <optional>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -124,13 +125,20 @@ std::optional<std::vector<MeasuredRow>> measure_all(Benchmark& bench, const std:
   out.reserve(rows.size());
   for (const auto& p : rows) {
     MeasurementRow m;
+    size_t pre_iters = 0;
+    size_t pre_sites = 0;
     try {
-      size_t pre_iters = bench.iterations(p);
-      size_t pre_sites = bench.sites_per_kernel(p);
-      if (pre_iters == 0 || pre_sites == 0) {
-        flog::error("invalid params: yields zero work (iterations={}, sites_per_kernel={})", pre_iters, pre_sites);
-        return std::nullopt;
-      }
+      pre_iters = bench.iterations(p);
+      pre_sites = bench.sites_per_kernel(p);
+    } catch (const std::exception& e) {
+      flog::error("invalid params: {}", e.what());
+      return std::nullopt;
+    }
+    if (pre_iters == 0 || pre_sites == 0) {
+      flog::error("invalid params: yields zero work (iterations={}, sites_per_kernel={})", pre_iters, pre_sites);
+      return std::nullopt;
+    }
+    try {
       JittedKernel kern(bench, p);
       if (!kern.ok()) {
         m.jit_failed = true;
@@ -141,9 +149,14 @@ std::optional<std::vector<MeasuredRow>> measure_all(Benchmark& bench, const std:
         flog::info("jit kernel: {} bytes", kern.code_size());
         m = runner::measure(kern.fn(), {.iters = pre_iters, .sites = pre_sites, .reps = reps, .warmup = warmup});
       }
-    } catch (const std::exception& e) {
+    } catch (const std::invalid_argument& e) {
       flog::error("benchmark error on params: {}", e.what());
       return std::nullopt;
+    } catch (const std::exception& e) {
+      m.jit_failed = true;
+      m.iters = pre_iters;
+      m.sites = pre_sites;
+      flog::warn("benchmark codegen failed on params: {}; emitting empty row", e.what());
     }
     out.push_back({p, m});
   }
