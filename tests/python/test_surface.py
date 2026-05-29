@@ -95,11 +95,12 @@ class TestSurfaceMakeFigure:
         with pytest.raises(PlotError, match="not a column"):
             surface_kind.make_figure(df, _args(y="not_a_column"))
 
-    def test_missing_grid_cell_raises(self):
+    def test_missing_grid_cell_renders_nan_surface_gap(self):
         df = tage_capacity_df(branch_amounts=(64, 128), pattern_amounts=(4, 8))
         df = df[~((df["branch_amount"] == _MISSING_BRANCH_AMOUNT) & (df["pattern_amount"] == _MISSING_PATTERN_AMOUNT))]
-        with pytest.raises(PlotError, match="missing grid cells"):
-            surface_kind.make_figure(df, _args())
+        fig = surface_kind.make_figure(df, _args())
+        z = np.array(fig.data[0].z)
+        assert np.isnan(z[1, 1])
 
     def test_logz_rejects_non_positive_values(self):
         df = tage_capacity_df()
