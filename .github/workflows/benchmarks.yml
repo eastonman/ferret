@@ -1,0 +1,91 @@
+name: benchmarks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: benchmark (${{ matrix.label }})
+    timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: ubuntu-x64, os: ubuntu-latest }
+          - { label: ubuntu-arm64, os: ubuntu-24.04-arm }
+          - { label: macos-arm64, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    env:
+      FERRET_BENCHMARK_ARTIFACT_PREFIX: ${{ matrix.label }}-
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+        with:
+          python-version: '3.12'
+
+      - name: install build tools (linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
+
+      - name: install build tools (macos)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: configure
+        run: cmake -S . -B build -GNinja -DCMAKE_BUILD_TYPE=Release
+
+      - name: build
+        run: cmake --build build --target ferret
+
+      - name: run full benchmark sweeps and render HTML
+        run: ./scripts/run_benchmarks.sh build/ferret benchmark-results/${{ matrix.label }}
+
+      - name: upload dependent_chain_throughput html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-dependent_chain_throughput.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-dependent_chain_throughput.html
+          archive: false
+
+      - name: upload direct_branch_footprint html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-direct_branch_footprint.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-direct_branch_footprint.html
+          archive: false
+
+      - name: upload nested_call_depth html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-nested_call_depth.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-nested_call_depth.html
+          archive: false
+
+      - name: upload branch_history_footprint html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-branch_history_footprint.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-branch_history_footprint.html
+          archive: false
