@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -47,11 +48,16 @@ def test_benchmark_runner_covers_full_sweep_html_outputs():
     assert "DIRECT_BRANCH_SPACING_LO=4" in text
     assert "DIRECT_BRANCH_SPACING_LO=8" in text
     assert 'run_benchmark "nested_call_depth" "line" "" "$FREQ"' in text
-    assert 'run_benchmark "branch_history_footprint" "surface" "" "$FREQ"' in text
+    assert (
+        'run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"'
+    ) in text
     assert 'cat "$md"' in text
     assert '"$GITHUB_STEP_SUMMARY"' in text
     assert 'python3 scripts/write_dependent_chain_markdown.py "$csv" "$md"' in text
     assert 'python3 scripts/freq.py "$csv"' in text
+    assert 'validate_csv_complete "$csv"' in text
+    assert "empty benchmark metric cells at CSV lines" in text
+    assert "ulimit -l 0" in text
 
     assert "detect_cpu_model()" in text
     assert "append_cpu_info_summary()" in text
@@ -63,7 +69,8 @@ def test_benchmark_runner_covers_full_sweep_html_outputs():
 
     assert "--branches=16..32768@2" in text
     assert "--spacing_bytes=${DIRECT_BRANCH_SPACING_LO}..128" in text
-    assert "--history_len=" not in text
+    assert "--branches=16..1024@2" in text
+    assert "--history_len=1..1024@2" in text
     assert "--depth=" not in text
     assert "--chain_length=" not in text
 
@@ -139,6 +146,9 @@ set -euo pipefail
 script="$1"
 shift
 case "$script" in
+  -)
+    exec "$FERRET_REAL_PYTHON" - "$@"
+    ;;
   scripts/freq.py)
     printf 'estimated_freq=4.000GHz\\n'
     ;;
@@ -180,6 +190,7 @@ esac
             "FERRET_BENCHMARK_REPS": "1",
             "FERRET_BENCHMARK_WARMUP": "0",
             "FERRET_FAKE_LOG": str(log_path),
+            "FERRET_REAL_PYTHON": sys.executable,
             "GITHUB_STEP_SUMMARY": str(summary_path),
             "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
         }
@@ -197,6 +208,10 @@ esac
     assert not any("--freq=" in call for call in calls if "dependent_chain_throughput" in call)
     for bench in ("direct_branch_footprint", "nested_call_depth", "branch_history_footprint"):
         assert any(f"run {bench}" in call and "--freq=4.000GHz" in call for call in calls)
+    assert any(
+        "run branch_history_footprint" in call and "--branches=16..1024@2" in call and "--history_len=1..1024@2" in call
+        for call in calls
+    )
 
     summary = summary_path.read_text(encoding="utf-8")
     assert "# dependent_chain_throughput" in summary

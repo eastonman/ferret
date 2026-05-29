@@ -33,7 +33,7 @@ alphabetical; each line is one sentence on responsibility.
   Pulls in `sljitLir.h`; not for use from non-JIT public headers.
 - `benchmark.hpp` — base class benchmark authors subclass, plus the
   registry and registration macro.
-- `cli_axis.hpp` — parses CLI values like `1..32768`, `16,32,64`, or
+- `cli_axis.hpp` — parses CLI values like `1..1024`, `16,32,64`, or
   `--option=42` into axis or option values.
 - `csv.hpp` — writes one CSV row per measurement to a caller-owned
   ostream.
