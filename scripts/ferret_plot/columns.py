@@ -1,7 +1,7 @@
 """Column classification and metric resolution.
 
 A ferret CSV has three classes of columns:
-- Metadata: emitted by every benchmark (benchmark name, timing,
+- Metadata: emitted by every benchmark (benchmark name, seed, timing,
   iters, sites_per_iter, reps, ns/cycles columns, freq_hz).
 - Axes: per-benchmark sweep parameters (e.g. branches, spacing_bytes).
 - (Future) Options: per-benchmark scalar options. Today these appear
@@ -25,6 +25,7 @@ _UNKNOWN_BENCH = "ferret"
 METADATA_COLS: frozenset[str] = frozenset(
     {
         "benchmark",
+        "seed",
         "ticks_min",
         "ticks_median",
         "iters",

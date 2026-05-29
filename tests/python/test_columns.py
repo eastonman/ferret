@@ -103,6 +103,20 @@ class TestAxisColumns:
         assert cols.varying_axis_columns(df) == ["branches", "spacing_bytes"]
 
 
+class TestSeedColumn:
+    def test_seed_is_metadata(self):
+        # seed is run-level provenance, always emitted by the C++ binary.
+        # It must be metadata so the plotter never treats it as an axis.
+        assert "seed" in cols.METADATA_COLS
+
+    def test_seed_not_classified_as_axis(self):
+        # A frame carrying a seed column must not surface seed as an axis,
+        # which would make concatenated multi-seed CSVs grow a phantom axis.
+        df = dbf_df().assign(seed=1)
+        assert "seed" not in cols.axis_columns(df)
+        assert cols.axis_columns(df) == ["branches", "spacing_bytes"]
+
+
 class TestPlotError:
     def test_is_an_exception(self):
         assert issubclass(PlotError, Exception)
