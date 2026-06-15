@@ -34,7 +34,7 @@
               pkgs.cli11
               pkgs.gtest
               pkgs.markdownlint-cli2
-              pkgs.nodePackages.prettier
+              pkgs.prettier
               pkgs.ruff
               pkgs.spdlog
               sljit
