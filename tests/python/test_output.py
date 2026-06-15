@@ -50,7 +50,7 @@ class TestEmitFormatResolution:
         fig = _fig()
         opened = []
         write_calls = []
-        monkeypatch.setattr(output.webbrowser, "open", lambda url: opened.append(url))
+        monkeypatch.setattr(output.webbrowser, "open", opened.append)
         monkeypatch.setattr(fig, "write_html", lambda *a, **kw: write_calls.append((a, kw)))
         output.emit(fig, out=None, fmt=None, html_js="cdn")
         assert len(write_calls) == 1

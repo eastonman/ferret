@@ -13,8 +13,7 @@ void CsvWriter::write_header() {
   for (const auto& a : axis_columns_) {
     os_ << "," << a;
   }
-  os_ << ",ticks_min,ticks_median,iters,sites_per_iter,reps"
-      << ",ns_per_site_min,ns_per_site_median";
+  os_ << ",ticks_min,ticks_median,iters,sites_per_iter,reps" << ",ns_per_site_min,ns_per_site_median";
   if (freq_hz_) {
     os_ << ",cycles_per_site_min,cycles_per_site_median,freq_hz";
   }

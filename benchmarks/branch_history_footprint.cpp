@@ -165,7 +165,7 @@ void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {
   // sljit prologue: 3 scratches + 2 saveds.
   // SLJIT_S0 = flat_base, SLJIT_S1 = hist_idx, SLJIT_R0 = iter counter.
   // SLJIT_R1 = row_ptr (recomputed per outer iter), SLJIT_R2 = loaded value.
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/3, /*saved=*/2, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/3, /*saveds=*/2, /*local_size=*/0);
   sljit_emit_op1(c, SLJIT_MOV, SLJIT_S0, 0, SLJIT_IMM, reinterpret_cast<sljit_sw>(flat_.data()));
   sljit_emit_op1(c, SLJIT_MOV, SLJIT_S1, 0, SLJIT_IMM, 0);
 

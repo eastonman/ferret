@@ -58,7 +58,7 @@ void emit_variant0_single_site(sljit_compiler* c, size_t depth, size_t iters) {
   std::vector<size_t> pending_targets;
 
   // chain_main: outer loop with one call into BODY_depth.
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/0, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saveds=*/0, /*local_size=*/0);
   emit_outer_loop(c, SLJIT_R0, iters, [&] {
     sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
     pending_calls.push_back(call_main);
@@ -69,7 +69,7 @@ void emit_variant0_single_site(sljit_compiler* c, size_t depth, size_t iters) {
   // BODY_d (d in [1, depth]) — single call to BODY_{d-1}.
   for (size_t d = depth; d >= 1; --d) {
     body_labels[d] = sljit_emit_label(c);
-    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saved=*/0, /*local_size=*/0);
+    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saveds=*/0, /*local_size=*/0);
     sljit_jump* call_body = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
     pending_calls.push_back(call_body);
     pending_targets.push_back(d - 1);
@@ -78,7 +78,7 @@ void emit_variant0_single_site(sljit_compiler* c, size_t depth, size_t iters) {
 
   // BODY_0 — bare ret.
   body_labels[0] = sljit_emit_label(c);
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saved=*/0, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saveds=*/0, /*local_size=*/0);
   sljit_emit_return_void(c);
 
   for (size_t i = 0; i < pending_calls.size(); ++i) {
@@ -109,7 +109,7 @@ void emit_variant1_counter_bit(sljit_compiler* c, size_t depth, size_t iters) {
   std::vector<size_t> pending_targets;
 
   // chain_main: counter in S0, single call into BODY_depth per iter.
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/1, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saveds=*/1, /*local_size=*/0);
   emit_outer_loop(c, SLJIT_S0, iters, [&] {
     sljit_jump* call_main = sljit_emit_call(c, SLJIT_CALL, SLJIT_ARGS0V());
     pending_calls.push_back(call_main);
@@ -120,7 +120,7 @@ void emit_variant1_counter_bit(sljit_compiler* c, size_t depth, size_t iters) {
   // BODY_d — test S0 & 1, branch to one of two call sites.
   for (size_t d = depth; d >= 1; --d) {
     body_labels[d] = sljit_emit_label(c);
-    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/1, /*local_size=*/0);
+    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saveds=*/1, /*local_size=*/0);
 
     // Test bit 0 of S0 (the iteration counter passed by chain_main).
     sljit_emit_op2u(c, SLJIT_AND | SLJIT_SET_Z, SLJIT_S0, 0, SLJIT_IMM, 1);
@@ -147,7 +147,7 @@ void emit_variant1_counter_bit(sljit_compiler* c, size_t depth, size_t iters) {
 
   // BODY_0 — bare ret. saved=1 so it preserves S0 across its (trivial) frame.
   body_labels[0] = sljit_emit_label(c);
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saved=*/1, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saveds=*/1, /*local_size=*/0);
   sljit_emit_return_void(c);
 
   for (size_t i = 0; i < pending_calls.size(); ++i) {
@@ -260,7 +260,7 @@ void emit_variant2_path_table(sljit_compiler* c, size_t depth, size_t iters, siz
   std::vector<size_t> pending_targets;
 
   // chain_main: S0 = counter, S1 = row pointer (recomputed per iter).
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/2, /*saved=*/2, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/2, /*saveds=*/2, /*local_size=*/0);
   emit_outer_loop(c, SLJIT_S0, iters, [&] {
     // R0 = table_ptr; R1 = (S0 & (rows-1)) * stride; S1 = R0 + R1.
     sljit_emit_op1(c, SLJIT_MOV, SLJIT_R0, 0, SLJIT_IMM, reinterpret_cast<sljit_sw>(table_ptr));
@@ -275,7 +275,7 @@ void emit_variant2_path_table(sljit_compiler* c, size_t depth, size_t iters, siz
 
   for (size_t d = depth; d >= 1; --d) {
     body_labels[d] = sljit_emit_label(c);
-    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saved=*/2, /*local_size=*/0);
+    sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/1, /*saveds=*/2, /*local_size=*/0);
 
     emit_k8_dispatch(c, /*table_offset=*/static_cast<sljit_sw>(depth - d + 1),
                      /*target_d=*/d - 1, pending_calls, pending_targets);
@@ -284,7 +284,7 @@ void emit_variant2_path_table(sljit_compiler* c, size_t depth, size_t iters, siz
   }
 
   body_labels[0] = sljit_emit_label(c);
-  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saved=*/2, /*local_size=*/0);
+  sljit_emit_enter(c, 0, SLJIT_ARGS0V(), /*scratches=*/0, /*saveds=*/2, /*local_size=*/0);
   sljit_emit_return_void(c);
 
   for (size_t i = 0; i < pending_calls.size(); ++i) {
