@@ -9,7 +9,7 @@ struct MeasurementRow {
   uint64_t ticks_min = 0;
   uint64_t ticks_median = 0;
   size_t iters = 0;
-  size_t sites = 0;
+  size_t sites = 0;  // emitted in CSV as the `sites_per_iter` column (see CsvWriter::write_header)
   size_t reps = 0;
   bool jit_failed = false;
 };
