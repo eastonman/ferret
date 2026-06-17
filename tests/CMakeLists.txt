@@ -37,7 +37,7 @@ target_link_libraries(test_csv PRIVATE ferret_core GTest::gtest GTest::gtest_mai
 gtest_discover_tests(test_csv)
 
 add_executable(test_runner test_runner.cpp)
-target_link_libraries(test_runner PRIVATE ferret_core GTest::gtest GTest::gtest_main ferret_warnings)
+target_link_libraries(test_runner PRIVATE ferret_core sljit::sljit GTest::gtest GTest::gtest_main ferret_warnings)
 gtest_discover_tests(test_runner)
 
 add_executable(test_padding test_padding.cpp)
@@ -93,6 +93,14 @@ gtest_discover_tests(test_parse)
 add_executable(test_run_options test_run_options.cpp)
 target_link_libraries(test_run_options PRIVATE ferret_core GTest::gtest GTest::gtest_main ferret_warnings)
 gtest_discover_tests(test_run_options)
+
+add_executable(test_train_betray_latency test_train_betray_latency.cpp)
+target_sources(test_train_betray_latency PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_train_betray_latency PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                    ferret_warnings
+)
+gtest_discover_tests(test_train_betray_latency)
 
 add_executable(test_integration test_integration.cpp)
 target_compile_definitions(test_integration PRIVATE FERRET_BINARY="$<TARGET_FILE:ferret>")

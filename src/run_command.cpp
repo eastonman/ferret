@@ -14,7 +14,6 @@
 #include "ferret/benchmark.hpp"
 #include "ferret/cli_axis.hpp"
 #include "ferret/csv.hpp"
-#include "ferret/jit.hpp"
 #include "ferret/log.hpp"
 #include "ferret/params.hpp"
 #include "ferret/pinning.hpp"
@@ -139,16 +138,7 @@ std::optional<std::vector<MeasuredRow>> measure_all(Benchmark& bench, const std:
       return std::nullopt;
     }
     try {
-      JittedKernel kern(bench, p);
-      if (!kern.ok()) {
-        m.jit_failed = true;
-        m.iters = pre_iters;
-        m.sites = pre_sites;
-        flog::warn("sljit_error on params; emitting empty row");
-      } else {
-        flog::info("jit kernel: {} bytes", kern.code_size());
-        m = runner::measure(kern.fn(), {.iters = pre_iters, .sites = pre_sites, .reps = reps, .warmup = warmup});
-      }
+      m = bench.measure_row(p, reps, warmup);
     } catch (const std::invalid_argument& e) {
       flog::error("benchmark error on params: {}", e.what());
       return std::nullopt;
