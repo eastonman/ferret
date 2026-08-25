@@ -218,9 +218,7 @@ target_link_libraries(ferret PRIVATE ferret_core ferret_benchmarks CLI11::CLI11 
 
 install(TARGETS ferret RUNTIME DESTINATION bin)
 
-if(CMAKE_CROSSCOMPILING)
-  set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
-endif()
+set(CMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE PRE_TEST)
 
 enable_testing()
 include(GoogleTest)
