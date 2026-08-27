@@ -666,3 +666,43 @@ TEST(Integration, NestedCallDepthLongSweepRowCount) {
   EXPECT_EQ(newlines, 65u) << "expected 1 header + 64 data rows";
   EXPECT_EQ(contents.find(",,"), std::string::npos);
 }
+
+TEST(Integration, TrainBetrayLatencyProducesExpectedRowCount) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_misp.csv";
+  TempFileGuard guard_out{out};
+  // branches ∈ {256, 512} → 2 data rows. train_iters small so the test
+  // finishes quickly on CI; the absolute number doesn't matter for a
+  // wiring smoke test.
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run train_betray_latency"
+                    " --branches=256,512"
+                    " --train_iters=8"
+                    " --reps=3 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  size_t newlines = std::count(contents.begin(), contents.end(), '\n');
+  EXPECT_EQ(newlines, 3u);  // header + 2 data rows
+  EXPECT_EQ(contents.find(",,\n"), std::string::npos);
+}
+
+TEST(Integration, TrainBetrayLatencyHeaderHasExpectedColumns) {
+  auto out = std::filesystem::temp_directory_path() / "ferret_misp_hdr.csv";
+  TempFileGuard guard_out{out};
+  std::string cmd = std::string(FERRET_BINARY) +
+                    " run train_betray_latency"
+                    " --branches=256"
+                    " --train_iters=8"
+                    " --reps=2 --warmup=1"
+                    " --out=" +
+                    out.string();
+  ASSERT_EQ(0, run(cmd));
+
+  std::string contents = slurp(out.string());
+  EXPECT_NE(contents.find("branches"), std::string::npos);
+  EXPECT_NE(contents.find("train_iters"), std::string::npos);
+  EXPECT_NE(contents.find("spacing_bytes"), std::string::npos);
+  EXPECT_NE(contents.find("ns_per_site_min"), std::string::npos);
+}

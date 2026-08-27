@@ -1,10 +1,16 @@
 #include "ferret/runner.hpp"
 
+#include "ferret/benchmark.hpp"
+#include "ferret/jit.hpp"
+#include "ferret/log.hpp"
+#include "ferret/params.hpp"
 #include "ferret/timing.hpp"
 
 #include <algorithm>
 #include <stdexcept>
 #include <vector>
+
+namespace flog = ferret::log;
 
 namespace ferret::runner {
 
@@ -37,6 +43,25 @@ MeasurementRow measure(KernelFn fn, const MeasureOptions& opts) {
   row.ticks_min = samples.front();
   row.ticks_median = samples[samples.size() / 2];
   return row;
+}
+
+MeasurementRow single_kernel_measure(Benchmark& b, const Params& p, int reps, int warmup) {
+  size_t pre_iters = b.iterations(p);
+  size_t pre_sites = b.sites_per_kernel(p);
+  if (pre_iters == 0 || pre_sites == 0) {
+    throw std::invalid_argument("single_kernel_measure: iterations and sites_per_kernel must be > 0");
+  }
+  JittedKernel kern(b, p);
+  if (!kern.ok()) {
+    MeasurementRow row;
+    row.jit_failed = true;
+    row.iters = pre_iters;
+    row.sites = pre_sites;
+    flog::warn("jit failure in {}; emitting empty row", b.name());
+    return row;
+  }
+  flog::info("jit kernel: {} bytes", kern.code_size());
+  return measure(kern.fn(), {.iters = pre_iters, .sites = pre_sites, .reps = reps, .warmup = warmup});
 }
 
 }  // namespace ferret::runner

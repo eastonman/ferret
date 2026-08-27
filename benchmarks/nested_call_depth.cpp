@@ -11,6 +11,7 @@ extern "C" {
 #include "ferret/bench_helpers.hpp"
 #include "ferret/benchmark.hpp"
 #include "ferret/permute.hpp"
+#include "ferret/runner.hpp"
 
 namespace ferret {
 
@@ -329,6 +330,10 @@ struct NestedCallDepth : Benchmark {
 
   [[nodiscard]] size_t iterations(const Params& p) const override {
     return compute_iterations(kOpBudget, p.get<size_t>("depth") + 1);
+  }
+
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
   }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {

@@ -89,3 +89,10 @@ jobs:
           name: ${{ matrix.label }}-branch_history_footprint.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-branch_history_footprint.html
           archive: false
+
+      - name: upload train_betray_latency html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-train_betray_latency.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-train_betray_latency.html
+          archive: false
