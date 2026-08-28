@@ -13,8 +13,29 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # turn it OFF (-DFERRET_WERROR=OFF) for a one-off local build.
 option(FERRET_WERROR "Treat warnings as errors for ferret targets" ON)
 
+# --- Static linking ---
+# Produces a binary with no runtime dependencies, for copying onto a
+# machine whose glibc / libstdc++ versions are unknown. Linux only:
+# Apple ships no static libc and no crt0.o, so -static cannot link on
+# Darwin. Off by default, so timing-sensitive workflows keep the normal
+# dynamic build. Only the option lives here, because the dependency
+# switch below reads it; the guards and link flags sit further down,
+# after FERRET_SANITIZER is declared.
+option(FERRET_STATIC "Link ferret fully statically (no runtime dependencies)" OFF)
+
+# System dependencies are bypassed for Android (nothing but the NDK
+# sysroot is on the search path) and for static builds (a shared
+# libspdlog.so cannot be linked into a -static binary; FetchContent
+# builds every dependency as a .a instead).
+#
+# Forcing CMAKE_FIND_LIBRARY_SUFFIXES to .a looks like a finer knob but
+# does not work here: spdlog and CLI11 resolve through their own
+# CONFIG-mode package files, which hardcode IMPORTED_LOCATION and the
+# library type when the dependency itself was built. No suffix setting
+# changes that after the fact, so switching the whole search off is the
+# accurate expression of the requirement.
 set(_ferret_use_system_deps ON)
-if(CMAKE_SYSTEM_NAME STREQUAL "Android")
+if(CMAKE_SYSTEM_NAME STREQUAL "Android" OR FERRET_STATIC)
   set(_ferret_use_system_deps OFF)
 endif()
 
@@ -59,6 +80,29 @@ if(FERRET_SANITIZER)
   # (Debug/RelWithDebInfo/Release) still applies.
   add_compile_options(${_ferret_san_arg} -fno-omit-frame-pointer -g)
   add_link_options(${_ferret_san_arg})
+endif()
+
+# --- Static link flags ---
+# Placed after FERRET_SANITIZER is declared so the conflict guard can
+# read it, and before the FetchContent calls below so that vendored
+# targets and everything under tests/ inherit -static. The sanitizer
+# check runs before the Darwin check on purpose: it makes the conflict
+# reportable on macOS instead of being masked by the platform error.
+if(FERRET_STATIC)
+  if(FERRET_SANITIZER)
+    message(FATAL_ERROR "ferret: FERRET_STATIC=ON cannot be combined with FERRET_SANITIZER='${FERRET_SANITIZER}'. "
+                        "Sanitizer runtimes require dynamic linking."
+    )
+  endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    message(
+      FATAL_ERROR
+        "ferret: FERRET_STATIC=ON is not supported on Darwin. macOS ships no static libc and no "
+        "crt0.o, so a fully static executable cannot be linked. Build static binaries on Linux " "(see docs/build.md)."
+    )
+  endif()
+  message(STATUS "ferret: static linking enabled")
+  add_link_options(-static)
 endif()
 
 # --- GoogleTest: find_package first, FetchContent fallback ---
