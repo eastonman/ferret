@@ -199,3 +199,102 @@ def bhf_df(
                 _add_freq(row, ns, freq_hz=4.0e9)
             rows.append(row)
     return pd.DataFrame(rows)
+
+
+def slf_df(
+    *,
+    addresses: tuple[int, ...] = (1, 2, 4, 8),
+    strides: tuple[int, ...] = (8, 16, 32),
+    base_regs: tuple[int, ...] = (0, 1),
+    with_freq: bool = True,
+) -> pd.DataFrame:
+    """store_load_footprint synthetic frame."""
+    rows = []
+    for a in addresses:
+        for s in strides:
+            for br in base_regs:
+                ns = 0.44 + a * 0.001 + s * 0.0005 + br * 0.002
+                row = {
+                    "benchmark": "store_load_footprint",
+                    "addresses": a,
+                    "stride_bytes": s,
+                    "base_reg": br,
+                    "alu_ops": 1,
+                    "seed": 1,
+                    "ticks_min": 1000 + a * s,
+                    "ticks_median": 1000 + a * s,
+                    "iters": 1,
+                    "sites_per_iter": 512,
+                    "reps": 7,
+                    "ns_per_site_min": ns,
+                    "ns_per_site_median": ns,
+                }
+                if with_freq:
+                    _add_freq(row, ns, freq_hz=4.5e9)
+                rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def sld_df(
+    *,
+    separations: tuple[int, ...] = (0, 1, 2, 4, 8),
+    fillers: tuple[int, ...] = (0, 1, 2, 3, 4, 5),
+    with_freq: bool = True,
+) -> pd.DataFrame:
+    """store_load_distance synthetic frame."""
+    rows = []
+    for sep in separations:
+        for f in fillers:
+            ns = 3.5 + sep * 0.01 + f * 0.005
+            row = {
+                "benchmark": "store_load_distance",
+                "separation": sep,
+                "filler": f,
+                "alu_ops": 16,
+                "seed": 1,
+                "ticks_min": 1000 + sep,
+                "ticks_median": 1000 + sep,
+                "iters": 1,
+                "sites_per_iter": 227,
+                "reps": 7,
+                "ns_per_site_min": ns,
+                "ns_per_site_median": ns,
+            }
+            if with_freq:
+                _add_freq(row, ns, freq_hz=4.5e9)
+            rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def slo_df(
+    *,
+    offsets: tuple[int, ...] = (-2, -1, 0),
+    store_widths: tuple[int, ...] = (4, 8),
+    load_widths: tuple[int, ...] = (4, 8),
+    with_freq: bool = True,
+) -> pd.DataFrame:
+    """store_load_overlap synthetic frame."""
+    rows = []
+    for off in offsets:
+        for sw in store_widths:
+            for lw in load_widths:
+                ns = 0.44 if (off == 0 and sw == 8 and lw == 8) else 2.4
+                row = {
+                    "benchmark": "store_load_overlap",
+                    "load_offset_bytes": off,
+                    "store_width": sw,
+                    "load_width": lw,
+                    "alu_ops": 1,
+                    "seed": 1,
+                    "ticks_min": 1000,
+                    "ticks_median": 1000,
+                    "iters": 1,
+                    "sites_per_iter": 1365,
+                    "reps": 7,
+                    "ns_per_site_min": ns,
+                    "ns_per_site_median": ns,
+                }
+                if with_freq:
+                    _add_freq(row, ns, freq_hz=4.5e9)
+                rows.append(row)
+    return pd.DataFrame(rows)
