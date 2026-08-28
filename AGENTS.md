@@ -117,7 +117,7 @@ lint: silence ruff on intentional lazy imports and wide signatures
 Forbidden in commit messages, PR titles, PR bodies, and code
 comments:
 
-- AI tool names (Codex, Claude, Grok, Gemini, …) — including
+- AI tool names (Codex, Claude, Grok, Gemini, …), including
   `Co-Authored-By:` footers.
 - Process narration ("FIXED", "Step 3", "Week 2", "Phase 1",
   "AC-x"). Write what the change _is_, not how the work
@@ -138,7 +138,8 @@ PRs target `main`. CI must be green:
 | `build.yml`      | Build + ctest across gcc-13/14, clang-17/18 on linux-x86_64; gcc-14/clang-18 on linux-arm64; Apple Clang on macos-arm64 |
 | `python.yml`     | `scripts/test_py.sh` + integration tests on linux-nix, linux-pip, macos-pip                                             |
 | `sanitizers.yml` | `address+undefined` (all OS) + `thread` (Linux only) on Debug builds                                                    |
-| `nix.yml`        | `nix flake check`                                                                                                       |
+| `nix.yml`        | `nix flake check`; builds `packages.static` (`flake check` only evaluates it)                                           |
+| `release.yml`    | Static musl builds (linux x86_64 + aarch64), android + macos builds; publishes binaries on `v*` tags                    |
 | `codeql.yml`     | CodeQL c-cpp + python; weekly cron                                                                                      |
 | `zizmor.yml`     | Workflow YAML security audit; weekly cron                                                                               |
 
@@ -151,6 +152,7 @@ PRs target `main`. CI must be green:
 - **`detect_leaks` on macOS aborts startup.** Do not name it in `ASAN_OPTIONS` when running sanitizer tests on macOS — see [`docs/build.md`](docs/build.md).
 - **Apple Silicon has no per-core affinity.** `--core=N` is informational on macOS arm64; probe and benchmark land on _some_ P-core, not necessarily the same one. See the README's discipline section.
 - **`benchmark-results/` is not gitignored** while `*.csv`, `*.html`, and `*.png` are. Take care not to commit large CSV/PNG outputs into other paths.
+- **`FERRET_STATIC=ON` forces the FetchContent path.** A static configure needs network access even on a machine with all four dependencies installed, because a shared `libspdlog.so` cannot be linked into a static binary. It is also Linux-only and hard-errors when combined with `FERRET_SANITIZER`.
 
 ## Where to find things
 
