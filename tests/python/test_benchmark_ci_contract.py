@@ -21,6 +21,9 @@ BENCHMARKS = (
     "direct_branch_footprint",
     "nested_call_depth",
     "branch_history_footprint",
+    "store_load_footprint",
+    "store_load_distance",
+    "store_load_overlap",
 )
 
 
@@ -48,6 +51,15 @@ def test_benchmark_runner_covers_full_sweep_html_outputs():
     assert "DIRECT_BRANCH_SPACING_LO=4" in text
     assert "DIRECT_BRANCH_SPACING_LO=8" in text
     assert 'run_benchmark "nested_call_depth" "line" "" "$FREQ"' in text
+    # store_load_footprint's default axes are already the intended sweep
+    # (addresses x stride_bytes x base_reg, 90 points), so CI passes no
+    # axis overrides.
+    assert 'run_benchmark "store_load_footprint" "line" "" "$FREQ"' in text
+    # Both distance and overlap need warmup=2: with a single warmup call the
+    # first parameter point of the sweep reads high and fakes a spike at
+    # separation=0 / offset=-2.
+    assert 'run_benchmark "store_load_distance" "line" "" "$FREQ" "--warmup=2"' in text
+    assert 'run_benchmark "store_load_overlap" "line" "" "$FREQ" "--warmup=2"' in text
     assert (
         'run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"'
     ) in text

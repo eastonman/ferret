@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from ferret_plot import registry as reg
 from ferret_plot.errors import PlotError
-from fixtures import bhf_df, dbf_df, dct_df, nced_df
+from fixtures import bhf_df, dbf_df, dct_df, nced_df, sld_df, slf_df, slo_df
 
 
 class TestDetectBenchmark:
@@ -78,6 +78,26 @@ class TestResolveDefaults:
         assert d.heatmap_x == "branches"
         assert d.heatmap_y == "history_len"
 
+    def test_sld_defaults(self):
+        d = reg.resolve_defaults(sld_df(), override=None)
+        assert d.line_x == "separation"
+        # A contiguous 0..16 sweep must not be plotted on a log axis.
+        assert d.line_xscale == "linear"
+        assert d.heatmap_y == "filler"
+
+    def test_slo_defaults(self):
+        d = reg.resolve_defaults(slo_df(), override=None)
+        assert d.line_x == "load_offset_bytes"
+        assert d.line_xscale == "linear"
+        assert d.facet_col == "store_width"
+
+    def test_slf_defaults(self):
+        d = reg.resolve_defaults(slf_df(), override=None)
+        assert d.line_x == "addresses"
+        assert d.heatmap_x == "addresses"
+        assert d.heatmap_y == "stride_bytes"
+        assert d.facet_col == "base_reg"
+
 
 class TestBenchmarkDefaults:
     """Verify the dataclass exposes every expected default field."""
@@ -124,3 +144,27 @@ class TestRegistryHonesty:
             col = getattr(d, attr)
             if col is not None:
                 assert col in df.columns, f"{attr}={col!r} not in bhf_df columns"
+
+    def test_sld_columns_present(self):
+        df = sld_df()
+        d = reg.DEFAULTS["store_load_distance"]
+        for attr in self._COLUMN_ATTRS:
+            col = getattr(d, attr)
+            if col is not None:
+                assert col in df.columns, f"{attr}={col!r} not in sld_df columns"
+
+    def test_slo_columns_present(self):
+        df = slo_df()
+        d = reg.DEFAULTS["store_load_overlap"]
+        for attr in self._COLUMN_ATTRS:
+            col = getattr(d, attr)
+            if col is not None:
+                assert col in df.columns, f"{attr}={col!r} not in slo_df columns"
+
+    def test_slf_columns_present(self):
+        df = slf_df()
+        d = reg.DEFAULTS["store_load_footprint"]
+        for attr in self._COLUMN_ATTRS:
+            col = getattr(d, attr)
+            if col is not None:
+                assert col in df.columns, f"{attr}={col!r} not in slf_df columns"

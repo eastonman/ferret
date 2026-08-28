@@ -183,3 +183,8 @@ esac
 run_benchmark "direct_branch_footprint" "line" "" "$FREQ" "--branches=16..32768@2 --spacing_bytes=${DIRECT_BRANCH_SPACING_LO}..128"
 run_benchmark "nested_call_depth" "line" "" "$FREQ"
 run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"
+run_benchmark "store_load_footprint" "line" "" "$FREQ"
+# warmup=2: the first parameter point of a sweep reads high with a single
+# warmup call, which shows up as a spurious spike at separation=0.
+run_benchmark "store_load_distance" "line" "" "$FREQ" "--warmup=2"
+run_benchmark "store_load_overlap" "line" "" "$FREQ" "--warmup=2"

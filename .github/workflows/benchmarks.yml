@@ -89,3 +89,23 @@ jobs:
           name: ${{ matrix.label }}-branch_history_footprint.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-branch_history_footprint.html
           archive: false
+
+      - name: upload store_load_footprint html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-store_load_footprint.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-store_load_footprint.html
+          archive: false
+      - name: upload store_load_distance html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-store_load_distance.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-store_load_distance.html
+          archive: false
+
+      - name: upload store_load_overlap html
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.label }}-store_load_overlap.html
+          path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-store_load_overlap.html
+          archive: false

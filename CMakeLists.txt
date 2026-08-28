@@ -251,8 +251,10 @@ target_compile_features(ferret_core PUBLIC cxx_std_20)
 # Benchmark TUs compiled once; both the ferret executable and benchmark-
 # specific tests reuse the resulting object files.
 add_library(
-  ferret_benchmarks OBJECT benchmarks/branch_history_footprint.cpp benchmarks/direct_branch_footprint.cpp
-                           benchmarks/nested_call_depth.cpp benchmarks/dependent_chain_throughput.cpp
+  ferret_benchmarks OBJECT
+  benchmarks/branch_history_footprint.cpp benchmarks/direct_branch_footprint.cpp benchmarks/nested_call_depth.cpp
+  benchmarks/dependent_chain_throughput.cpp benchmarks/store_load_footprint.cpp benchmarks/store_load_distance.cpp
+  benchmarks/store_load_overlap.cpp
 )
 target_link_libraries(ferret_benchmarks PRIVATE ferret_core sljit::sljit ferret_warnings)
 
