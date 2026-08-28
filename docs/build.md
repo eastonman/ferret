@@ -55,12 +55,55 @@ output has no such requirement.
 
 ## CMake knobs
 
-| Option                               | Default | Purpose                                                                                                                                                                 |
-| ------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-DFERRET_WERROR=ON\|OFF`            | `ON`    | Treat warnings as errors on ferret's own targets (vendored deps unaffected). Turn off for one-off local builds against a newer compiler. CI runs with the default `ON`. |
-| `-DFERRET_SANITIZER=<mode>`          | unset   | Enable a sanitizer build (see below).                                                                                                                                   |
-| `-DCMAKE_BUILD_TYPE=<type>`          | unset   | Debug / Release / RelWithDebInfo. CI build job leaves this unset; sanitizer jobs set `Debug`.                                                                           |
-| `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` | off     | Required for `scripts/lint.sh` (clang-tidy reads `build/compile_commands.json`).                                                                                        |
+| Option                               | Default | Purpose                                                                                                                                                                                                                       |
+| ------------------------------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-DFERRET_WERROR=ON\|OFF`            | `ON`    | Treat warnings as errors on ferret's own targets (vendored deps unaffected). Turn off for one-off local builds against a newer compiler. CI runs with the default `ON`.                                                       |
+| `-DFERRET_SANITIZER=<mode>`          | unset   | Enable a sanitizer build (see below).                                                                                                                                                                                         |
+| `-DFERRET_STATIC=ON\|OFF`            | `OFF`   | Link fully statically, so the binary has no runtime dependencies. Linux only; errors on macOS and when combined with `FERRET_SANITIZER`. Forces the FetchContent dependency path, so a static configure needs network access. |
+| `-DCMAKE_BUILD_TYPE=<type>`          | unset   | Debug / Release / RelWithDebInfo. CI build job leaves this unset; sanitizer jobs set `Debug`.                                                                                                                                 |
+| `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON` | off     | Required for `scripts/lint.sh` (clang-tidy reads `build/compile_commands.json`).                                                                                                                                              |
+
+## Static builds
+
+`-DFERRET_STATIC=ON` links `ferret` with no runtime dependencies, so
+the binary can be copied onto a machine whose glibc and libstdc++
+versions are unknown. Three constraints:
+
+- **Linux only.** macOS ships no static libc and no `crt0.o`, so the
+  option hard-errors on Darwin. This is not a limitation to work
+  around.
+- **Incompatible with `FERRET_SANITIZER`.** Sanitizer runtimes require
+  dynamic linking; combining the two hard-errors.
+- **Needs network at configure time.** `FERRET_STATIC=ON` forces the
+  FetchContent path even on a machine that has all four dependencies
+  installed, because a shared `libspdlog.so` cannot be linked into a
+  static binary.
+
+Building against musl, which is what the published release artifacts use,
+needs no toolchain setup beyond Docker:
+
+```sh
+docker run --rm -v "$PWD:/src" -w /src alpine:3.22 sh -c '
+  apk add --no-cache build-base cmake git
+  cmake -S . -B build-static -DFERRET_STATIC=ON -DCMAKE_BUILD_TYPE=Release
+  cmake --build build-static -j"$(nproc)"
+'
+```
+
+`.github/workflows/release.yml` holds the authoritative version of this
+recipe, with a digest-pinned image and the full verification sequence;
+the snippet above is a convenience copy. Confirm the result is static
+with `readelf -l build-static/ferret`. A static binary has no `INTERP`
+program header.
+
+Nix users get the same thing from the flake, built against musl from
+`pkgsStatic` and pinned by `flake.lock`:
+
+```sh
+nix build .#static
+```
+
+That output is Linux-only for the same reason the CMake option is.
 
 ## Sanitizer builds
 

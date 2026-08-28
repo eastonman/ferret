@@ -18,6 +18,26 @@ resulting curves so you can spot capacity/associativity cliffs.
 
 RISC-V and LoongArch are reachable through sljit but not yet supported.
 
+## Prebuilt binaries
+
+Each release publishes binaries for four targets. The two Linux builds
+are fully static against musl. Copy one onto any machine of the right
+architecture and run it, with no toolchain, no Nix, and no matching
+glibc.
+
+```sh
+curl -LO https://github.com/eastonman/ferret/releases/latest/download/ferret-linux-x86_64-musl
+chmod +x ferret-linux-x86_64-musl
+./ferret-linux-x86_64-musl list
+```
+
+`ferret-android-arm64` depends only on on-device bionic.
+`ferret-macos-arm64-dynamic` is dynamically linked, because macOS
+cannot produce a static executable. Verify any download against the release's
+`SHA256SUMS`.
+
+Building from source instead: [`docs/build.md`](docs/build.md).
+
 ## Quickstart
 
 ```sh

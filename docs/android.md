@@ -9,6 +9,11 @@ the host for plotting.
 Use this workflow when you want to validate ferret on a real phone —
 for example a Snapdragon 888 or Snapdragon 8 Gen 3 device.
 
+Cross-compiling is optional. Each release publishes a prebuilt
+`ferret-android-arm64`; download it, `chmod +x`, and skip straight to
+[Stage Binaries On The Device](#stage-binaries-on-the-device). Build
+from source when you need a modified ferret on the phone.
+
 ## Prerequisites
 
 Enter the Android dev shell. It pulls in the NDK, platform-tools (`adb`),
