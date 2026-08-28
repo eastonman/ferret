@@ -1,0 +1,178 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build (${{ matrix.artifact }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { artifact: ferret-linux-x86_64-musl, os: ubuntu-latest, kind: musl }
+          - { artifact: ferret-linux-aarch64-musl, os: ubuntu-24.04-arm, kind: musl }
+          - { artifact: ferret-android-arm64, os: ubuntu-latest, kind: android }
+          - { artifact: ferret-macos-arm64-dynamic, os: macos-latest, kind: macos }
+    env:
+      ALPINE_IMAGE: alpine@sha256:14358309a308569c32bdc37e2e0e9694be33a9d99e68afb0f5ff33cc1f695dce  # alpine:3.22
+      ARTIFACT: ${{ matrix.artifact }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Alpine runs via `docker run`, not `container:`. The Actions
+      # runner injects a glibc-linked Node into job containers to run
+      # actions/checkout, and Alpine has no glibc, so a container: job
+      # fails before it compiles anything. Checkout and upload stay on
+      # the glibc host; only the build and test happen in musl.
+      - name: build and test static binary
+        if: matrix.kind == 'musl'
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src "$ALPINE_IMAGE" sh -c '
+          set -eu
+          apk add --no-cache build-base cmake git
+          cmake -S . -B build-static -DFERRET_STATIC=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-static -j"$(nproc)"
+          readelf -l build-static/ferret > /tmp/phdrs.txt
+          if grep -q INTERP /tmp/phdrs.txt; then
+            echo "ERROR: ferret has an INTERP header - it is dynamically linked" >&2
+            exit 1
+          fi
+          ctest --test-dir build-static --output-on-failure
+          ./build-static/ferret run dependent_chain_throughput --reps=1 --warmup=0 --out=/tmp/smoke.csv
+          test "$(wc -l < /tmp/smoke.csv)" -ge 2
+          '
+          sudo chown -R "$(id -u):$(id -g)" build-static
+          cp build-static/ferret "$ARTIFACT"
+
+      - name: locate Android NDK
+        if: matrix.kind == 'android'
+        run: |
+          # ubuntu-latest runners ship the Android NDK at ANDROID_NDK_LATEST_HOME.
+          # Fail fast with a useful message if that assumption breaks.
+          if [ -z "${ANDROID_NDK_LATEST_HOME:-}" ] || [ ! -f "$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" ]; then
+            echo "ANDROID_NDK_LATEST_HOME not usable: '$ANDROID_NDK_LATEST_HOME'" >&2
+            exit 1
+          fi
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+
+      - name: build (android)
+        if: matrix.kind == 'android'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build binutils
+          cmake -S . -B build-android -GNinja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=arm64-v8a \
+            -DANDROID_PLATFORM=android-35 \
+            -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-android
+          readelf -h build-android/ferret > /tmp/hdr.txt
+          if ! grep -q 'AArch64' /tmp/hdr.txt; then
+            echo "ERROR: ferret is not an aarch64 binary" >&2
+            exit 1
+          fi
+          readelf -d build-android/ferret > /tmp/dyn.txt
+          if grep -q 'libc++_shared' /tmp/dyn.txt; then
+            echo "ERROR: ferret links libc++_shared; expected a static C++ runtime" >&2
+            exit 1
+          fi
+          cp build-android/ferret "$ARTIFACT"
+
+      - name: build and test (macos)
+        if: matrix.kind == 'macos'
+        run: |
+          brew install ninja
+          cmake -S . -B build-release -GNinja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-release
+          ctest --test-dir build-release --output-on-failure
+          cp build-release/ferret "$ARTIFACT"
+
+      - name: upload artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+          retention-days: 7
+          if-no-files-found: error
+          archive: false
+
+  publish:
+    name: publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: download artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: generate checksums
+        run: |
+          cd artifacts
+          chmod +x ferret-*
+          sha256sum ferret-* > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: write release notes
+        run: |
+          cat > NOTES.md <<'EOF'
+          ## Binaries
+
+          | File | Target | Runtime dependencies |
+          | --- | --- | --- |
+          | `ferret-linux-x86_64-musl` | Linux x86_64 | none, fully static (musl) |
+          | `ferret-linux-aarch64-musl` | Linux aarch64 | none, fully static (musl) |
+          | `ferret-android-arm64` | Android arm64-v8a | on-device bionic only |
+          | `ferret-macos-arm64-dynamic` | macOS arm64 | **dynamically linked** against the macOS SDK |
+
+          macOS cannot produce a fully static executable, because Apple ships no
+          static libc and no `crt0.o`. That binary alone therefore carries no
+          no-runtime-dependencies guarantee.
+
+          Downloads are not marked executable. After downloading:
+
+          ```sh
+          chmod +x ferret-linux-x86_64-musl
+          ./ferret-linux-x86_64-musl list
+          ```
+
+          Verify with `sha256sum -c SHA256SUMS`.
+          EOF
+
+      - name: create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          case "$TAG" in
+            *-*) PRERELEASE=--prerelease ;;
+            *)   PRERELEASE= ;;
+          esac
+          gh release create "$TAG" \
+            --repo "$REPO" \
+            --title "$TAG" \
+            --notes-file NOTES.md \
+            $PRERELEASE \
+            artifacts/ferret-* artifacts/SHA256SUMS
