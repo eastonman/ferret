@@ -40,10 +40,18 @@ jobs:
       # actions/checkout, and Alpine has no glibc, so a container: job
       # fails before it compiles anything. Checkout and upload stay on
       # the glibc host; only the build and test happen in musl.
+      # SYS_NICE is needed because the container runs as root, so
+      # Pinning.BoostPriorityRequiresPrivilege does not take its
+      # geteuid() != 0 skip and asserts setpriority(-10) succeeds.
+      # Docker's default capability set omits SYS_NICE, so that call
+      # returns EPERM despite the process being root. Granting the
+      # capability keeps the assertion meaningful instead of weakening
+      # it. Its sibling mlockall test needs nothing extra, since
+      # mlockall succeeds within RLIMIT_MEMLOCK without a capability.
       - name: build and test static binary
         if: matrix.kind == 'musl'
         run: |
-          docker run --rm -v "$PWD:/src" -w /src "$ALPINE_IMAGE" sh -c '
+          docker run --rm --cap-add=SYS_NICE -v "$PWD:/src" -w /src "$ALPINE_IMAGE" sh -c '
           set -eu
           apk add --no-cache build-base cmake git
           cmake -S . -B build-static -DFERRET_STATIC=ON -DCMAKE_BUILD_TYPE=Release
