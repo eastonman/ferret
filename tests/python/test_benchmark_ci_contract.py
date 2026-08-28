@@ -223,3 +223,22 @@ esac
     assert "| os |" in summary
     cpu_section = summary.split("## Runner CPU", 1)[1].split("##", 1)[0]
     assert "unknown" not in cpu_section, f"CPU model was not detected: {cpu_section}"
+
+
+def test_lint_and_format_skip_side_build_trees():
+    """AGENTS.md tells contributors to keep side builds in build-*/ trees
+    (sanitizers, Android, portable). Those trees contain vendored CMake
+    from FetchContent, which cmake-lint would reject. Pruning only
+    ./build would let any side tree break the lint gate."""
+    prune = r"\( -path './build*' -o -path ./.git -o -name '_deps' \) -prune -o"
+    for script in ("format.sh", "lint.sh"):
+        text = (ROOT / "scripts" / script).read_text(encoding="utf-8")
+        assert prune in text, f"{script} must prune build* and any nested _deps"
+        assert "-path ./build -o" not in text, f"{script} still prunes only the canonical build/"
+
+    # markdownlint and prettier walk the tree too, and vendored FetchContent
+    # markdown under build-*/_deps/ fails both.
+    lint = (ROOT / "scripts" / "lint.sh").read_text(encoding="utf-8")
+    assert "'#build*/**'" in lint and "'#**/_deps/**'" in lint, "markdownlint must skip side-build trees"
+    ignore = (ROOT / ".prettierignore").read_text(encoding="utf-8")
+    assert "build-*/" in ignore, ".prettierignore must cover side-build trees"
