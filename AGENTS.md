@@ -114,11 +114,23 @@ fix(plot): export surface png via chromium webgl fallback
 lint: silence ruff on intentional lazy imports and wide signatures
 ```
 
+Every commit carries two trailers, in Linux kernel style:
+
+```text
+Signed-off-by: Your Name <you@example.com>
+Assisted-by: Tool Name <noreply@example.com>
+```
+
+`Signed-off-by` comes from `git commit -s`. `Assisted-by` names any AI
+tool that helped produce the change, and is the sole place a tool name
+may appear.
+
 Forbidden in commit messages, PR titles, PR bodies, and code
 comments:
 
-- AI tool names (Codex, Claude, Grok, Gemini, …), including
-  `Co-Authored-By:` footers.
+- AI tool names (Codex, Claude, Grok, Gemini, …) in subjects, bodies,
+  and comments. The `Assisted-by:` trailer above is the only exception;
+  `Co-Authored-By:` footers remain forbidden.
 - Process narration ("FIXED", "Step 3", "Week 2", "Phase 1",
   "AC-x"). Write what the change _is_, not how the work
   progressed.
