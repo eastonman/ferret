@@ -14,6 +14,7 @@ extern "C" {
 #include "ferret/benchmark.hpp"
 #include "ferret/padding.hpp"
 #include "ferret/permute.hpp"
+#include "ferret/runner.hpp"
 
 namespace ferret {
 
@@ -125,6 +126,10 @@ struct BranchHistoryFootprint : Benchmark {
 
   void emit_kernel(sljit_compiler* c, const Params& p) override;
   void verify_layout(sljit_compiler* c) override;
+
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
+  }
 };
 
 void BranchHistoryFootprint::emit_kernel(sljit_compiler* c, const Params& p) {

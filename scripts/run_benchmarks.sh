@@ -183,3 +183,4 @@ esac
 run_benchmark "direct_branch_footprint" "line" "" "$FREQ" "--branches=16..32768@2 --spacing_bytes=${DIRECT_BRANCH_SPACING_LO}..128"
 run_benchmark "nested_call_depth" "line" "" "$FREQ"
 run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"
+run_benchmark "train_betray_latency" "line" "" "$FREQ"

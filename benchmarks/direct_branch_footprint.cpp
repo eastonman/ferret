@@ -28,6 +28,7 @@ extern "C" {
 #include "ferret/benchmark.hpp"
 #include "ferret/padding.hpp"
 #include "ferret/permute.hpp"
+#include "ferret/runner.hpp"
 
 namespace ferret {
 
@@ -185,6 +186,10 @@ struct DirectBranchFootprint : Benchmark {
     last_next_ = std::move(next);
     last_branches_ = branches;
     last_spacing_ = spacing;
+  }
+
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
   }
 
   // First verifies each branch site sits at base + i*spacing — throws

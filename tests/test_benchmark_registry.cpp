@@ -13,6 +13,9 @@ struct DummyBench : Benchmark {
   size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("x"); }
   size_t iterations(const Params&) const override { return 1; }
   void emit_kernel(sljit_compiler*, const Params&) override {}
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
+  }
 };
 FERRET_BENCHMARK("dummy_for_test", DummyBench);
 }  // namespace

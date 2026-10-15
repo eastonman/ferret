@@ -4,6 +4,7 @@ extern "C" {
 
 #include "ferret/bench_helpers.hpp"
 #include "ferret/benchmark.hpp"
+#include "ferret/runner.hpp"
 
 namespace ferret {
 
@@ -25,6 +26,10 @@ struct DependentChainThroughput : Benchmark {
   [[nodiscard]] size_t sites_per_kernel(const Params& p) const override { return p.get<size_t>("chain_length"); }
 
   [[nodiscard]] size_t iterations(const Params& /*p*/) const override { return 1; }
+
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
+  }
 
   void emit_kernel(sljit_compiler* c, const Params& p) override {
     auto total = p.get<size_t>("chain_length");

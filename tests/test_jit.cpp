@@ -22,6 +22,9 @@ struct EmptyBench : Benchmark {
     sljit_emit_enter(c, 0, SLJIT_ARGS0V(), 0, 0, 0);
     sljit_emit_return_void(c);
   }
+  MeasurementRow measure_row(const Params& p, int reps, int warmup) override {
+    return runner::single_kernel_measure(*this, p, reps, warmup);
+  }
 };
 
 }  // namespace
