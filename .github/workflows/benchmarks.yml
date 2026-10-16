@@ -63,28 +63,28 @@ jobs:
         run: ./scripts/run_benchmarks.sh build/ferret benchmark-results/${{ matrix.label }}
 
       - name: upload dependent_chain_throughput html
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ${{ matrix.label }}-dependent_chain_throughput.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-dependent_chain_throughput.html
           archive: false
 
       - name: upload direct_branch_footprint html
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ${{ matrix.label }}-direct_branch_footprint.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-direct_branch_footprint.html
           archive: false
 
       - name: upload nested_call_depth html
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ${{ matrix.label }}-nested_call_depth.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-nested_call_depth.html
           archive: false
 
       - name: upload branch_history_footprint html
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ${{ matrix.label }}-branch_history_footprint.html
           path: benchmark-results/${{ matrix.label }}/${{ matrix.label }}-branch_history_footprint.html
