@@ -101,6 +101,9 @@ CLI flags and axis syntax: [`docs/cli.md`](docs/cli.md).
 | [`direct_branch_footprint`](docs/benchmarks/direct_branch_footprint.md)       | direct-jump BTB capacity                        |
 | [`nested_call_depth`](docs/benchmarks/nested_call_depth.md)                   | Return Address Stack (RAS) depth                |
 | [`branch_history_footprint`](docs/benchmarks/branch_history_footprint.md)     | conditional-branch direction-predictor capacity |
+| [`store_load_footprint`](docs/benchmarks/store_load_footprint.md)             | store-to-load forward latency                   |
+| [`store_load_distance`](docs/benchmarks/store_load_distance.md)               | store-to-load separation window                 |
+| [`store_load_overlap`](docs/benchmarks/store_load_overlap.md)                 | store-to-load address/width match conditions    |
 
 Each benchmark page has the kernel structure, CLI surface, and reading-the-curves guide.
 

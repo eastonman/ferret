@@ -18,6 +18,32 @@ extern "C" {
 
 namespace ferret {
 
+// Immediate a store->load dependent chain adds to its value on every
+// link. It MUST be non-zero, for two independent reasons, and both
+// failure modes are silent and read *faster* than the truth:
+//
+//  1. Load value prediction. Apple cores carry a per-PC last-value load
+//     predictor. If a static load instruction returns the same value on
+//     consecutive executions, the predictor supplies it and severs the
+//     dependent chain: the loop then runs at issue throughput and the
+//     benchmark reports that as if it were latency. Measured on an M4
+//     Pro, a chain whose loaded value never changes reads 0.35 cycles
+//     per link against a true 3.00 — an 8x error, in the direction that
+//     looks like a discovery. Incrementing by a non-zero amount keeps
+//     every load's result fresh, so the predictor can never fire.
+//
+//  2. Move elimination. `ADD xd, xn, #0` is a canonical register-move
+//     form and is eliminated to zero cycles. That breaks the "each ALU
+//     op on the chain costs exactly one cycle" accounting that per-link
+//     cost normalization depends on, so subtracting the op count would
+//     over-subtract.
+//
+// Any non-zero value works; 1 keeps the op a plain ADD.
+constexpr sljit_sw kChainCarryImm = 1;
+static_assert(kChainCarryImm != 0,
+              "a zero carry immediate lets the load value predictor sever the chain and turns every "
+              "dependent-chain benchmark into an issue-throughput measurement");
+
 // Emits the canonical ferret outer-loop scaffold around a body lambda:
 //
 //   MOV counter_reg, iters

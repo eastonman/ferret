@@ -181,6 +181,69 @@ Key idioms:
 - **`emit_nops(c, n)`** — pads each branch out to the requested
   `spacing_bytes` using arch-correct NOP encodings (see `padding.hpp`).
 
+## Dependent-chain benchmarks: two ways to measure a lie
+
+A benchmark that times a dependent chain reports latency only while the
+chain is actually serial. Both ways it can silently stop being serial
+make the result read _faster_ than the truth, which is the direction
+that looks like a discovery rather than a bug.
+
+### The loaded value must change on every link
+
+Apple cores carry a per-PC last-value load predictor (the structure
+behind the published FLOP attack, present from M3/A17). If a static load
+instruction returns the same value on consecutive executions, the
+predictor supplies it and the dependent chain is severed: the loop then
+runs at issue throughput and the benchmark reports that as a latency.
+
+Measured on an M4 Pro with a pointer chase, the size of the lie:
+
+```text
+chase over N nodes, unrolled 32x     N=1,2,4,8,16,32  ->  ~0.4 cycles/load
+                                     N=3,5,6,7,...    ->   3.0 cycles/load
+```
+
+The fast rows are exactly the N that divide the unroll factor — those are
+the cases where each static load PC lands on the same node every time and
+so returns a constant. Change the unroll to 30 and the fast set becomes
+the divisors of 30. It is keyed on the load's PC, not on the address.
+
+So: never let a load in a measured chain return a repeating value. The
+`store_load_*` benchmarks carry their chain with `kChainCarryImm`
+(`bench_helpers.hpp`), a non-zero increment, precisely so no load result
+can repeat. `store_load_overlap` goes further and _rejects_ parameter
+points where the load would miss the byte the increment touches, because
+those rows would read a constant.
+
+### The carry op must not be a disguised move
+
+`ADD xd, xn, #0` is a canonical register-move form and is eliminated to
+zero cycles. That breaks the "each carry op costs exactly one cycle"
+accounting that per-link normalization relies on, so subtracting the op
+count over-corrects. `kChainCarryImm` is `static_assert`ed non-zero for
+this reason as well.
+
+### Check it, do not assume it
+
+The identity `cycles_per_site = F + alu_ops` has a testable consequence:
+the slope against `alu_ops` must be 1.0. `scripts/chain_slope.py` fits it
+and fails otherwise.
+
+```sh
+for a in 1 2 4 8 16; do
+  build/ferret run store_load_footprint --alu_ops=$a --freq=4.5GHz \
+      --reps=9 --warmup=2 --out=/tmp/slope-$a.csv
+done
+python3 scripts/chain_slope.py /tmp/slope-*.csv
+```
+
+A slope well below 1.0 means the chain was severed. A slope above 1.0
+means the carry ops cost more than a cycle each and `F` cannot be
+recovered by subtraction. Run this whenever you add a chain benchmark,
+change its carry op, or port to a new microarchitecture — and re-run it
+on a quiet machine, because a loaded machine can push the fit off by
+10% on its own.
+
 ## Smoke-testing a new benchmark
 
 After building:

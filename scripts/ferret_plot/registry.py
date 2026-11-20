@@ -47,6 +47,30 @@ DEFAULTS: dict[str, BenchmarkDefaults] = {
         heatmap_x="branches",
         heatmap_y="history_len",
     ),
+    "store_load_distance": BenchmarkDefaults(
+        # separation is a contiguous 0..16 range, not a log2 sweep, so a
+        # log x-axis would crush exactly the region of interest.
+        line_x="separation",
+        line_xscale="linear",
+        heatmap_x="separation",
+        heatmap_y="filler",
+    ),
+    "store_load_overlap": BenchmarkDefaults(
+        line_x="load_offset_bytes",
+        line_xscale="linear",
+        heatmap_x="load_offset_bytes",
+        heatmap_y="load_width",
+        facet_col="store_width",
+    ),
+    "store_load_footprint": BenchmarkDefaults(
+        line_x="addresses",
+        heatmap_x="addresses",
+        heatmap_y="stride_bytes",
+        # base_reg is the SP-vs-general-register comparison; keeping the
+        # two on separate subplots is what makes a gap between them read
+        # at a glance.
+        facet_col="base_reg",
+    ),
 }
 
 

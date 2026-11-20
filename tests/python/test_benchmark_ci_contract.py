@@ -21,6 +21,9 @@ BENCHMARKS = (
     "direct_branch_footprint",
     "nested_call_depth",
     "branch_history_footprint",
+    "store_load_footprint",
+    "store_load_distance",
+    "store_load_overlap",
 )
 
 
@@ -48,6 +51,19 @@ def test_benchmark_runner_covers_full_sweep_html_outputs():
     assert "DIRECT_BRANCH_SPACING_LO=4" in text
     assert "DIRECT_BRANCH_SPACING_LO=8" in text
     assert 'run_benchmark "nested_call_depth" "line" "" "$FREQ"' in text
+    # store_load_footprint's default axes are already the intended sweep
+    # (addresses x stride_bytes x base_reg, 90 points), so CI passes no
+    # axis overrides.
+    assert 'run_benchmark "store_load_footprint" "line" "" "$FREQ"' in text
+    # Both distance and overlap need warmup=2: with a single warmup call the
+    # first parameter point of the sweep reads high and fakes a spike at
+    # separation=0 / offset=-2.
+    assert 'run_benchmark "store_load_distance" "line" "" "$FREQ" "" "2"' in text
+    assert 'run_benchmark "store_load_overlap" "line" "" "$FREQ" "" "2"' in text
+    # extra_args must never carry a flag run_benchmark already supplies;
+    # the CLI rejects a repeated option outright.
+    assert '"--warmup=' not in text, "pass warmup as the 6th argument, not through extra_args"
+    assert '"--reps=' not in text, "pass reps via REPS, not through extra_args"
     assert (
         'run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"'
     ) in text
@@ -204,6 +220,16 @@ esac
     )
 
     calls = log_path.read_text(encoding="utf-8").splitlines()
+
+    # The real CLI rejects a repeated option ("At Most 1 required but
+    # received 2") and aborts the whole sweep. The fake ferret above
+    # accepts anything, so without this check a duplicated flag in
+    # run_benchmarks.sh reaches CI undetected.
+    for call in calls:
+        seen = [arg.split("=", 1)[0] for arg in call.split() if arg.startswith("--")]
+        dupes = {flag for flag in seen if seen.count(flag) > 1}
+        assert not dupes, f"repeated option(s) {sorted(dupes)} in: {call}"
+
     assert any("run dependent_chain_throughput" in call for call in calls)
     assert not any("--freq=" in call for call in calls if "dependent_chain_throughput" in call)
     for bench in ("direct_branch_footprint", "nested_call_depth", "branch_history_footprint"):
@@ -223,3 +249,22 @@ esac
     assert "| os |" in summary
     cpu_section = summary.split("## Runner CPU", 1)[1].split("##", 1)[0]
     assert "unknown" not in cpu_section, f"CPU model was not detected: {cpu_section}"
+
+
+def test_lint_and_format_skip_side_build_trees():
+    """AGENTS.md tells contributors to keep side builds in build-*/ trees
+    (sanitizers, Android, portable). Those trees contain vendored CMake
+    from FetchContent, which cmake-lint would reject. Pruning only
+    ./build would let any side tree break the lint gate."""
+    prune = r"\( -path './build*' -o -path ./.git -o -name '_deps' \) -prune -o"
+    for script in ("format.sh", "lint.sh"):
+        text = (ROOT / "scripts" / script).read_text(encoding="utf-8")
+        assert prune in text, f"{script} must prune build* and any nested _deps"
+        assert "-path ./build -o" not in text, f"{script} still prunes only the canonical build/"
+
+    # markdownlint and prettier walk the tree too, and vendored FetchContent
+    # markdown under build-*/_deps/ fails both.
+    lint = (ROOT / "scripts" / "lint.sh").read_text(encoding="utf-8")
+    assert "'#build*/**'" in lint and "'#**/_deps/**'" in lint, "markdownlint must skip side-build trees"
+    ignore = (ROOT / ".prettierignore").read_text(encoding="utf-8")
+    assert "build-*/" in ignore, ".prettierignore must cover side-build trees"

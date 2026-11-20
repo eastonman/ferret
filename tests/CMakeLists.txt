@@ -78,6 +78,30 @@ target_link_libraries(
 )
 gtest_discover_tests(test_direct_branch_footprint)
 
+add_executable(test_store_load_footprint test_store_load_footprint.cpp)
+target_sources(test_store_load_footprint PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_store_load_footprint PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                    ferret_warnings
+)
+gtest_discover_tests(test_store_load_footprint)
+
+add_executable(test_store_load_distance test_store_load_distance.cpp)
+target_sources(test_store_load_distance PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_store_load_distance PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                   ferret_warnings
+)
+gtest_discover_tests(test_store_load_distance)
+
+add_executable(test_store_load_overlap test_store_load_overlap.cpp)
+target_sources(test_store_load_overlap PRIVATE $<TARGET_OBJECTS:ferret_benchmarks>)
+target_link_libraries(
+  test_store_load_overlap PRIVATE ferret_core ferret_benchmarks sljit::sljit GTest::gtest GTest::gtest_main
+                                  ferret_warnings
+)
+gtest_discover_tests(test_store_load_overlap)
+
 add_executable(test_jit test_jit.cpp)
 target_link_libraries(test_jit PRIVATE ferret_core sljit::sljit GTest::gtest GTest::gtest_main ferret_warnings)
 gtest_discover_tests(test_jit)

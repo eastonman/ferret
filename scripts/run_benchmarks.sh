@@ -27,10 +27,11 @@ run_benchmark() {
   local extra_output="${3:-}"
   local freq="${4:-}"
   local extra_args="${5:-}"
+  local warmup="${6:-$WARMUP}"
   local csv="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.csv"
   local html="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.html"
   local md="$OUT_DIR/${ARTIFACT_PREFIX}${bench}.md"
-  local args=(run "$bench" --reps="$REPS" --warmup="$WARMUP" --out="$csv")
+  local args=(run "$bench" --reps="$REPS" --warmup="$warmup" --out="$csv")
 
   echo "==> running $bench full sweep"
   if [[ -n "$freq" ]]; then
@@ -183,3 +184,10 @@ esac
 run_benchmark "direct_branch_footprint" "line" "" "$FREQ" "--branches=16..32768@2 --spacing_bytes=${DIRECT_BRANCH_SPACING_LO}..128"
 run_benchmark "nested_call_depth" "line" "" "$FREQ"
 run_benchmark "branch_history_footprint" "surface" "" "$FREQ" "--branches=16..1024@2 --history_len=1..1024@2"
+run_benchmark "store_load_footprint" "line" "" "$FREQ"
+# warmup=2: the first parameter point of a sweep reads high with a single
+# warmup call, which shows up as a spurious spike at separation=0. Passed
+# as the warmup argument, not through extra_args -- run_benchmark already
+# supplies --warmup and the CLI rejects the flag twice.
+run_benchmark "store_load_distance" "line" "" "$FREQ" "" "2"
+run_benchmark "store_load_overlap" "line" "" "$FREQ" "" "2"

@@ -24,7 +24,7 @@ ruff check --fix scripts/ tests/python/
 # CMake: format CMakeLists.txt and any *.cmake modules in-tree.
 mapfile -t CMAKE_FILES < <(
   find . \
-    \( -path ./build -o -path ./.git -o -path ./_deps \) -prune -o \
+    \( -path './build*' -o -path ./.git -o -name '_deps' \) -prune -o \
     \( -name 'CMakeLists.txt' -o -name '*.cmake' \) -type f -print
 )
 if [ "${#CMAKE_FILES[@]}" -gt 0 ]; then
